@@ -1,10 +1,11 @@
 # coding: utf-8
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog, QFrame
 from qfluentwidgets import (ScrollArea, PushSettingCard, SwitchSettingCard,
                             PrimaryPushButton, BodyLabel, FluentIcon as FIF,
                             setTheme, Theme, InfoBar, ComboBox, LineEdit,
-                            CardWidget, CaptionLabel, IconWidget, InfoBarPosition)
+                            CardWidget, CaptionLabel, IconWidget, InfoBarPosition,
+                            SubtitleLabel, StrongBodyLabel, HyperlinkButton)
 
 from app.common.config import cfg
 
@@ -92,20 +93,18 @@ class SettingsInterface(ScrollArea):
 
     def createSettingGroup(self, title, cards):
         """ Create a setting group widget """
-        group = QWidget()
+        group = CardWidget()
         groupLayout = QVBoxLayout(group)
-        groupLayout.setContentsMargins(0, 0, 0, 0)
-        groupLayout.setSpacing(10)
+        groupLayout.setContentsMargins(20, 20, 20, 20)
+        groupLayout.setSpacing(15)
 
-        titleLabel = BodyLabel(title)
-        titleLabel.setStyleSheet("font-size: 16px; font-weight: bold;")
-
+        titleLabel = SubtitleLabel(title)
         groupLayout.addWidget(titleLabel)
 
         # Add separator line
-        separator = QWidget()
-        separator.setFixedHeight(1)
-        separator.setStyleSheet("background-color: rgba(102, 102, 102, 0.3);")
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setStyleSheet("background-color: rgba(0, 0, 0, 0.1);")
         groupLayout.addWidget(separator)
 
         # Add cards
@@ -116,29 +115,30 @@ class SettingsInterface(ScrollArea):
 
     def createComboSetting(self, title, description, combo, icon):
         """ Create a combo box setting card """
-        card = CardWidget(self)
-        cardLayout = QVBoxLayout(card)
-        cardLayout.setContentsMargins(15, 15, 15, 15)
-        cardLayout.setSpacing(10)
+        card = QWidget(self)
+        cardLayout = QHBoxLayout(card)
+        cardLayout.setContentsMargins(10, 10, 10, 10)
+        cardLayout.setSpacing(15)
 
-        # Title with icon
-        titleLayout = QHBoxLayout()
+        # Icon
         titleIcon = IconWidget(icon, self)
-        titleIcon.setFixedSize(20, 20)
-        titleLabel = BodyLabel(title)
-        titleLabel.setStyleSheet("font-size: 14px; font-weight: bold;")
-
-        titleLayout.addWidget(titleIcon)
-        titleLayout.addWidget(titleLabel)
-        titleLayout.addStretch()
-
-        # Description
+        titleIcon.setFixedSize(24, 24)
+        cardLayout.addWidget(titleIcon)
+        
+        # Text layout
+        textLayout = QVBoxLayout()
+        textLayout.setSpacing(4)
+        
+        titleLabel = StrongBodyLabel(title)
         descLabel = CaptionLabel(description)
         descLabel.setWordWrap(True)
+        
+        textLayout.addWidget(titleLabel)
+        textLayout.addWidget(descLabel)
+        cardLayout.addLayout(textLayout, 1)
 
         # Combo box
-        cardLayout.addLayout(titleLayout)
-        cardLayout.addWidget(descLabel)
+        combo.setMinimumWidth(150)
         cardLayout.addWidget(combo)
 
         return card

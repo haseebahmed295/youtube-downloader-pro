@@ -14,34 +14,52 @@ from PySide6.QtWidgets import QApplication
 
 from qfluentwidgets import FluentTranslator
 from app.common.config import cfg
+from app.common.logger import setup_logger, get_logger
 from app.view.main_window import MainWindow
 
 def main():
-    # Enable DPI scaling
-    if cfg.get(cfg.dpiScale) != "Auto":
-        os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
-        os.environ["QT_SCALE_FACTOR"] = str(cfg.get(cfg.dpiScale))
+    # Set up logging first
+    logger = setup_logger(level='DEBUG')  # Change to 'DEBUG' for more verbose logging
+    logger.info("Initializing YouTube Downloader...")
+    
+    try:
+        # Enable DPI scaling
+        if cfg.get(cfg.dpiScale) != "Auto":
+            os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
+            os.environ["QT_SCALE_FACTOR"] = str(cfg.get(cfg.dpiScale))
+            logger.debug(f"DPI Scale set to: {cfg.get(cfg.dpiScale)}")
 
-    # Create application
-    app = QApplication(sys.argv)
-    app.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings)
+        # Create application
+        logger.info("Creating QApplication...")
+        app = QApplication(sys.argv)
+        app.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings)
 
-    # Internationalization
-    from PySide6.QtCore import QLocale
-    locale_str = cfg.get(cfg.language)
-    locale = QLocale(locale_str) if locale_str else QLocale()
-    translator = FluentTranslator(locale)
-    appTranslator = QTranslator()
-    appTranslator.load(locale, "youtube_downloader", ".", ":/i18n")
+        # Internationalization
+        from PySide6.QtCore import QLocale
+        locale_str = cfg.get(cfg.language)
+        locale = QLocale(locale_str) if locale_str else QLocale()
+        translator = FluentTranslator(locale)
+        appTranslator = QTranslator()
+        appTranslator.load(locale, "youtube_downloader", ".", ":/i18n")
 
-    app.installTranslator(translator)
-    app.installTranslator(appTranslator)
+        app.installTranslator(translator)
+        app.installTranslator(appTranslator)
+        logger.info(f"Language set to: {locale_str or 'system default'}")
 
-    # Create main window
-    w = MainWindow()
-    w.show()
+        # Create main window
+        logger.info("Creating main window...")
+        w = MainWindow()
+        w.show()
+        logger.info("Application started successfully")
 
-    app.exec()
+        # Run application
+        exit_code = app.exec()
+        logger.info(f"Application exited with code: {exit_code}")
+        return exit_code
+        
+    except Exception as e:
+        logger.critical(f"Fatal error during startup: {str(e)}", exc_info=True)
+        return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

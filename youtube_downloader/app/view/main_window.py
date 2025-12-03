@@ -11,6 +11,7 @@ from qfluentwidgets import setTheme, Theme
 
 from app.common.config import cfg
 from app.view.download_history_interface import DownloadHistoryInterface
+from app.view.playlist_interface import PlaylistInterface
 from app.view.settings_interface import SettingsInterface
 from app.view.about_interface import AboutInterface
 
@@ -28,6 +29,7 @@ class MainWindow(FluentWindow):
 
         # create sub interfaces
         self.downloadHistoryInterface = DownloadHistoryInterface(self)
+        self.playlistInterface = PlaylistInterface(self)
         self.settingsInterface = SettingsInterface(self)
         self.aboutInterface = AboutInterface(self)
 
@@ -60,6 +62,7 @@ class MainWindow(FluentWindow):
         """ Initialize navigation items """
         # add navigation items
         self.addSubInterface(self.downloadHistoryInterface, FIF.DOWNLOAD, "Download & History")
+        self.addSubInterface(self.playlistInterface, FIF.MENU, "Playlist Download")
         self.addSubInterface(self.settingsInterface, FIF.SETTING, "Settings")
         self.addSubInterface(self.aboutInterface, FIF.INFO, "About")
 

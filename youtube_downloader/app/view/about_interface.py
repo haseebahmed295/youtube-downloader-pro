@@ -1,9 +1,10 @@
 # coding: utf-8
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 from PySide6.QtGui import QDesktopServices
 from qfluentwidgets import (ScrollArea, BodyLabel, HyperlinkLabel, PrimaryPushButton,
-                            CardWidget, CaptionLabel, FluentIcon as FIF)
+                            CardWidget, CaptionLabel, FluentIcon as FIF, SubtitleLabel,
+                            StrongBodyLabel, TitleLabel, IconWidget)
 
 class AboutInterface(ScrollArea):
     """ About interface """
@@ -32,56 +33,89 @@ class AboutInterface(ScrollArea):
 
     def __initLayout(self):
         """ Initialize layout """
-        # App info
-        appInfo = self.createInfoCard(
-            "YouTube Downloader",
-            "A modern YouTube video and audio downloader built with PySide6-Fluent-Widgets",
-            FIF.INFO
-        )
+        # Header card
+        headerCard = CardWidget(self)
+        headerLayout = QVBoxLayout(headerCard)
+        headerLayout.setContentsMargins(30, 30, 30, 30)
+        headerLayout.setSpacing(15)
+        headerLayout.setAlignment(Qt.AlignCenter)
+        
+        appIcon = IconWidget(FIF.VIDEO, self)
+        appIcon.setFixedSize(64, 64)
+        headerLayout.addWidget(appIcon, 0, Qt.AlignCenter)
+        
+        appTitle = TitleLabel("YouTube Downloader")
+        appTitle.setAlignment(Qt.AlignCenter)
+        headerLayout.addWidget(appTitle)
+        
+        appVersion = CaptionLabel("Version 1.0.0")
+        appVersion.setAlignment(Qt.AlignCenter)
+        headerLayout.addWidget(appVersion)
+        
+        appDesc = BodyLabel("A modern YouTube video and audio downloader\nbuilt with PySide6-Fluent-Widgets")
+        appDesc.setAlignment(Qt.AlignCenter)
+        appDesc.setWordWrap(True)
+        headerLayout.addWidget(appDesc)
 
         # Features
         features = self.createInfoCard(
             "Features",
             """• Download YouTube videos and playlists
-• Multiple quality options (1080p, 720p, 480p, 360p)
-• Audio-only download support
-• Multiple format options (MP4, WEBM, 3GP, MP3, AAC)
-• Download history tracking
-• Concurrent downloads
-• Modern Fluent UI design
-• Dark/Light theme support""",
-            FIF.INFO
+• Multiple quality options (Best, 1080p, 720p, 480p, 360p)
+• Audio-only download with MP3, AAC, OGG, WAV formats
+• Video formats: MP4, WEBM, 3GP
+• Real-time download progress with speed and ETA
+• Download history with search and export
+• Context menu for quick file access
+• Keyboard shortcuts (Ctrl+Enter to download, Esc to cancel)
+• Modern Fluent UI design with dark/light theme support""",
+            FIF.CHECKBOX
         )
 
         # Technologies
         technologies = self.createInfoCard(
             "Technologies",
-            """• PySide6 - Qt for Python
-• PySide6-Fluent-Widgets - Modern UI components
-• PyTube - YouTube downloading library
-• MoviePy - Video processing (future enhancement)""",
+            """• PySide6 - Qt for Python framework
+• PySide6-Fluent-Widgets - Modern Fluent Design UI components
+• yt-dlp - Powerful YouTube downloading library
+• Python 3.8+ - Modern Python features""",
             FIF.CODE
         )
 
-        # Links
-        linksLayout = QHBoxLayout()
-        linksLayout.setSpacing(20)
+        # Links card
+        linksCard = CardWidget(self)
+        linksLayout = QVBoxLayout(linksCard)
+        linksLayout.setContentsMargins(20, 20, 20, 20)
+        linksLayout.setSpacing(15)
+        
+        linksTitle = SubtitleLabel("Links & Resources")
+        linksLayout.addWidget(linksTitle)
+        
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setStyleSheet("background-color: rgba(0, 0, 0, 0.1);")
+        linksLayout.addWidget(separator)
+        
+        btnLayout = QHBoxLayout()
+        btnLayout.setSpacing(15)
 
-        githubBtn = PrimaryPushButton(FIF.GITHUB, "GitHub")
+        githubBtn = PrimaryPushButton(FIF.GITHUB, "GitHub Repository")
         githubBtn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/zhiyiYo/PyQt-Fluent-Widgets")))
 
         docsBtn = PrimaryPushButton(FIF.DOCUMENT, "Documentation")
         docsBtn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://qfluentwidgets.com")))
 
-        linksLayout.addWidget(githubBtn)
-        linksLayout.addWidget(docsBtn)
-        linksLayout.addStretch()
+        btnLayout.addWidget(githubBtn)
+        btnLayout.addWidget(docsBtn)
+        btnLayout.addStretch()
+        
+        linksLayout.addLayout(btnLayout)
 
         # Add to main layout
-        self.vBoxLayout.addWidget(appInfo)
+        self.vBoxLayout.addWidget(headerCard)
         self.vBoxLayout.addWidget(features)
         self.vBoxLayout.addWidget(technologies)
-        self.vBoxLayout.addLayout(linksLayout)
+        self.vBoxLayout.addWidget(linksCard)
         self.vBoxLayout.addStretch()
 
     def createInfoCard(self, title, content, icon):
@@ -93,20 +127,25 @@ class AboutInterface(ScrollArea):
 
         # Title with icon
         titleLayout = QHBoxLayout()
-        titleIcon = QLabel()
-        titleIcon.setPixmap(icon.icon().pixmap(24, 24))
-        titleLabel = BodyLabel(title)
-        titleLabel.setStyleSheet("font-size: 18px; font-weight: bold;")
+        titleIcon = IconWidget(icon, self)
+        titleIcon.setFixedSize(24, 24)
+        titleLabel = SubtitleLabel(title)
 
         titleLayout.addWidget(titleIcon)
         titleLayout.addWidget(titleLabel)
         titleLayout.addStretch()
+
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setStyleSheet("background-color: rgba(0, 0, 0, 0.1);")
 
         # Content
         contentLabel = BodyLabel(content)
         contentLabel.setWordWrap(True)
 
         cardLayout.addLayout(titleLayout)
+        cardLayout.addWidget(separator)
         cardLayout.addWidget(contentLabel)
 
         return card

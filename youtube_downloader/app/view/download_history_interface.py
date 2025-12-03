@@ -1,155 +1,25 @@
 # coding: utf-8
-from PySide6.QtCore import Qt, Signal, QThread, QUrl
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog
-from PySide6.QtGui import QDesktopServices
+"""
+Combined Download and History Interface
+"""
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+                               QFileDialog, QFrame, QTableWidgetItem, 
+                               QHeaderView, QApplication)
+from PySide6.QtGui import QDesktopServices, QColor, QKeySequence, QShortcut
 
-from PySide6.QtWidgets import QListWidgetItem, QTableWidget, QTableWidgetItem, QHeaderView
-from PySide6.QtGui import QColor
 from qfluentwidgets import (ScrollArea, PushButton, LineEdit, ComboBox, SwitchButton,
                             ProgressBar, InfoBar, InfoBarPosition, InfoBarIcon,
                             CardWidget, BodyLabel, CaptionLabel, PrimaryPushButton,
-                            ToolButton, FluentIcon as FIF, RoundMenu, Action,
-                            IndeterminateProgressRing, MessageBox, ListWidget)
-import yt_dlp
+                            FluentIcon as FIF, RoundMenu, Action,
+                            IndeterminateProgressRing, MessageBox,
+                            StrongBodyLabel, SubtitleLabel, TableWidget,
+                            IconInfoBadge, InfoBadge, DotInfoBadge)
 import os
-import time
-import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.common.config import cfg
-
-class DownloadWorker(QThread):
-    """ Download worker thread """
-    progressUpdated = Signal(int, str)  # progress, video_id
-    downloadCompleted = Signal(str, str)  # video_id, file_path
-    downloadFailed = Signal(str, str)  # video_id, error_message
-
-    def __init__(self, url, download_path, quality, format_type, is_audio_only):
-        super().__init__()
-        self.url:str = url
-        self.download_path = download_path
-        self.quality = quality
-        self.format_type = format_type
-        self.is_audio_only = is_audio_only
-        self._is_cancelled = False
-
-    def run(self):
-        try:
-            if "playlist" in self.url.lower() or "list=" in self.url.lower():
-                self.download_playlist()
-            else:
-                self.download_video()
-        except Exception as e:
-            self.downloadFailed.emit("unknown", str(e))
-
-    def download_video(self):
-        try:
-            # Set up yt-dlp options
-            ydl_opts = {
-                'format': self.get_format_string(),
-                'outtmpl': os.path.join(self.download_path, '%(title)s.%(ext)s'),
-                'progress_hooks': [self.progress_hook],
-                'quiet': True,
-                'no_warnings': True,
-            }
-
-            if self.is_audio_only:
-                ydl_opts['format'] = 'bestaudio/best'
-                ydl_opts['postprocessors'] = [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': self.format_type.lower(),
-                    'preferredquality': '192',
-                }]
-
-            # Ensure download directory exists
-            os.makedirs(self.download_path, exist_ok=True)
-
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(self.url, download=True)
-                video_id = info_dict.get('id', 'unknown')
-                file_path = ydl.prepare_filename(info_dict)
-
-                if not self._is_cancelled:
-                    self.downloadCompleted.emit(video_id, file_path)
-
-        except Exception as e:
-            self.downloadFailed.emit("unknown", str(e))
-
-    def download_playlist(self):
-        try:
-            # Set up yt-dlp options for playlist
-            ydl_opts = {
-                'format': self.get_format_string(),
-                'outtmpl': os.path.join(self.download_path, '%(playlist_title)s', '%(title)s.%(ext)s'),
-                'progress_hooks': [self.progress_hook],
-                'quiet': True,
-                'no_warnings': True,
-                'ignoreerrors': True,
-            }
-
-            if self.is_audio_only:
-                ydl_opts['format'] = 'bestaudio/best'
-                ydl_opts['postprocessors'] = [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': self.format_type.lower(),
-                    'preferredquality': '192',
-                }]
-
-            # Ensure download directory exists
-            os.makedirs(self.download_path, exist_ok=True)
-
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(self.url, download=True)
-
-                # Get list of downloaded files
-                if 'entries' in info_dict:
-                    for entry in info_dict['entries']:
-                        if entry and not self._is_cancelled:
-                            video_id = entry.get('id', 'unknown')
-                            file_path = ydl.prepare_filename(entry)
-                            self.downloadCompleted.emit(video_id, file_path)
-
-        except Exception as e:
-            self.downloadFailed.emit("unknown", f"Playlist download failed: {str(e)}")
-
-    def get_format_string(self):
-        """Get the appropriate format string for yt-dlp"""
-        if self.is_audio_only:
-            return 'bestaudio/best'
-
-        # Map quality to yt-dlp format selectors
-        quality_map = {
-            "1080p": "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-            "720p": "bestvideo[height<=720]+bestaudio/best[height<=720]",
-            "480p": "bestvideo[height<=480]+bestaudio/best[height<=480]",
-            "360p": "bestvideo[height<=360]+bestaudio/best[height<=360]",
-            "Best Available": "bestvideo+bestaudio/best"
-        }
-
-        format_str = quality_map.get(self.quality, "bestvideo+bestaudio/best")
-
-        # Add format preference if specified
-        if self.format_type.lower() != "best":
-            format_str += f"/best[ext={self.format_type.lower()}]"
-
-        return format_str
-
-    def progress_hook(self, d):
-        """Handle progress updates from yt-dlp"""
-        if self._is_cancelled:
-            return
-
-        if d['status'] == 'downloading':
-            video_id = d.get('info_dict', {}).get('id', 'unknown')
-            progress = d.get('_percent_str', '0%').replace('%', '')
-            try:
-                progress_int = int(float(progress))
-                self.progressUpdated.emit(progress_int, video_id)
-            except:
-                pass
-
-    def cancel(self):
-        self._is_cancelled = True
+from app.components.download_worker import DownloadWorker
 
 class DownloadHistoryInterface(ScrollArea):
     """ Combined download and history interface """
@@ -168,24 +38,46 @@ class DownloadHistoryInterface(ScrollArea):
         self.formatCombo = ComboBox()
         self.audioOnlySwitch = SwitchButton("Audio Only")
         self.downloadBtn = PrimaryPushButton("Download")
+        self.cancelBtn = PushButton("Cancel", self, FIF.CANCEL)
+        self.cancelBtn.hide()
         self.progressRing = IndeterminateProgressRing()
         self.progressRing.hide()
         self.progressBar = ProgressBar()
+        
+        # Video info card
+        self.videoInfoCard = CardWidget(self)
+        self.videoInfoCard.hide()
+        self.videoTitleLabel = StrongBodyLabel("Video Title")
+        self.videoDurationLabel = CaptionLabel("Duration: --:--")
+        
+        # Enhanced status
+        self.statusLabel = BodyLabel("Ready to download")
+        self.speedLabel = CaptionLabel("")
+        self.etaLabel = CaptionLabel("")
 
         # History components
-        self.historyTable = QTableWidget(self)
+        self.historyTable = TableWidget(self)
         self.clearBtn = PushButton("Clear History", self, FIF.DELETE)
-
-        # Status
-        self.statusLabel = BodyLabel("Ready")
+        self.exportBtn = PushButton("Export", self, FIF.SAVE)
+        self.searchInput = LineEdit()
+        self.searchInput.setPlaceholderText("Search history...")
 
         self.__initWidget()
         self.__initLayout()
 
         # Connect signals
         self.downloadBtn.clicked.connect(self.startDownload)
+        self.cancelBtn.clicked.connect(self.cancelDownload)
         self.audioOnlySwitch.checkedChanged.connect(self.updateFormatOptions)
         self.clearBtn.clicked.connect(self.clearHistory)
+        self.exportBtn.clicked.connect(self.exportHistory)
+        self.searchInput.textChanged.connect(self.filterHistory)
+        
+        # Keyboard shortcuts
+        self.downloadShortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
+        self.downloadShortcut.activated.connect(self.startDownload)
+        self.cancelShortcut = QShortcut(QKeySequence("Escape"), self)
+        self.cancelShortcut.activated.connect(self.cancelDownload)
 
         # Download worker and tracking
         self.current_worker = None
@@ -211,77 +103,181 @@ class DownloadHistoryInterface(ScrollArea):
         self.vBoxLayout.setAlignment(Qt.AlignTop)
 
         # Configure URL input
-        self.urlInput.setPlaceholderText("Enter YouTube URL here...")
+        self.urlInput.setPlaceholderText("Enter YouTube URL here (Ctrl+Enter to download)...")
         self.urlInput.setClearButtonEnabled(True)
+        self.urlInput.setMinimumHeight(40)
 
         # Configure quality combo
-        self.qualityCombo.addItems(["1080p", "720p", "480p", "360p", "Best Available"])
+        self.qualityCombo.addItems(["Best Available", "1080p", "720p", "480p", "360p"])
         self.qualityCombo.setCurrentText(cfg.get(cfg.downloadQuality))
+        self.qualityCombo.setMinimumWidth(150)
 
         # Configure format combo
         self.formatCombo.addItems(["MP4", "WEBM", "3GP"])
         self.formatCombo.setCurrentText(cfg.get(cfg.downloadFormat).upper())
+        self.formatCombo.setMinimumWidth(120)
 
         # Configure download button
         self.downloadBtn.setIcon(FIF.DOWNLOAD)
+        self.downloadBtn.setMinimumHeight(36)
+        
+        # Configure cancel button
+        self.cancelBtn.setMinimumHeight(36)
 
         # Configure progress bar
         self.progressBar.setRange(0, 100)
-        self.progressBar.setFixedHeight(6)
+        self.progressBar.setFixedHeight(8)
         self.progressBar.setVisible(False)
+        
+        # Configure video info card
+        videoInfoLayout = QVBoxLayout(self.videoInfoCard)
+        videoInfoLayout.setContentsMargins(15, 15, 15, 15)
+        videoInfoLayout.setSpacing(8)
+        videoInfoLayout.addWidget(self.videoTitleLabel)
+        videoInfoLayout.addWidget(self.videoDurationLabel)
+        
+        # Configure status labels
+        self.speedLabel.setTextColor(QColor(100, 100, 100), QColor(200, 200, 200))
+        self.etaLabel.setTextColor(QColor(100, 100, 100), QColor(200, 200, 200))
 
-        # Configure history table
+        # Configure history table with improved styling (using TableWidget)
         self.historyTable.setObjectName('historyTable')
-        self.historyTable.setColumnCount(3)
-        self.historyTable.setHorizontalHeaderLabels(['Status', 'Time', 'Details'])
-        self.historyTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.historyTable.setAlternatingRowColors(True)
-        self.historyTable.setSelectionBehavior(QTableWidget.SelectRows)
-        self.historyTable.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.historyTable.setColumnCount(4)
+        self.historyTable.setHorizontalHeaderLabels(['Status', 'Date & Time', 'Video Title', 'File Location'])
+        
+        # Enable modern TableWidget features
+        self.historyTable.setBorderVisible(True)
+        self.historyTable.setBorderRadius(8)
+        self.historyTable.setWordWrap(False)
+        
+        # Configure header
+        header = self.historyTable.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Fixed)
+        header.setSectionResizeMode(1, QHeaderView.Fixed)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
+        header.setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        header.setMinimumSectionSize(80)
+        
+        # Set column widths
+        self.historyTable.setColumnWidth(0, 120)  # Status column
+        self.historyTable.setColumnWidth(1, 160)  # Time column
+        
+        # Row height
+        self.historyTable.verticalHeader().setDefaultSectionSize(40)
+        self.historyTable.verticalHeader().hide()
+        
+        # Context menu and interactions
+        self.historyTable.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.historyTable.customContextMenuRequested.connect(self.showHistoryContextMenu)
+        self.historyTable.doubleClicked.connect(self.openHistoryFile)
+        
+        # Configure search input
+        self.searchInput.setClearButtonEnabled(True)
+        self.searchInput.setMinimumWidth(250)
+        self.searchInput.setFixedHeight(32)
 
     def __initLayout(self):
         """ Initialize layout """
+        # Create download card
+        downloadCard = CardWidget(self)
+        downloadCardLayout = QVBoxLayout(downloadCard)
+        downloadCardLayout.setContentsMargins(20, 20, 20, 20)
+        downloadCardLayout.setSpacing(15)
+        
+        # Title
+        titleLabel = SubtitleLabel("Download Video")
+        downloadCardLayout.addWidget(titleLabel)
+        
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setStyleSheet("background-color: rgba(0, 0, 0, 0.1);")
+        downloadCardLayout.addWidget(separator)
+        
         # URL input row
         urlRow = QHBoxLayout()
-        urlRow.addWidget(QLabel("YouTube URL:"))
+        urlLabel = BodyLabel("URL:")
+        urlLabel.setFixedWidth(60)
+        urlRow.addWidget(urlLabel)
         urlRow.addWidget(self.urlInput, 1)
+        downloadCardLayout.addLayout(urlRow)
 
         # Options row
         optionsRow = QHBoxLayout()
-        optionsRow.addWidget(QLabel("Quality:"))
+        qualityLabel = BodyLabel("Quality:")
+        qualityLabel.setFixedWidth(60)
+        optionsRow.addWidget(qualityLabel)
         optionsRow.addWidget(self.qualityCombo)
-        optionsRow.addSpacing(20)
-        optionsRow.addWidget(QLabel("Format:"))
+        optionsRow.addSpacing(15)
+        formatLabel = BodyLabel("Format:")
+        formatLabel.setFixedWidth(60)
+        optionsRow.addWidget(formatLabel)
         optionsRow.addWidget(self.formatCombo)
-        optionsRow.addSpacing(20)
+        optionsRow.addSpacing(15)
         optionsRow.addWidget(self.audioOnlySwitch)
         optionsRow.addStretch()
+        downloadCardLayout.addLayout(optionsRow)
+        
+        # Video info card
+        downloadCardLayout.addWidget(self.videoInfoCard)
+
+        # Progress section
+        progressLayout = QVBoxLayout()
+        progressLayout.setSpacing(8)
+        
+        # Progress bar
+        progressLayout.addWidget(self.progressBar)
+        
+        # Status row with speed and ETA
+        statusRow = QHBoxLayout()
+        statusRow.addWidget(self.statusLabel)
+        statusRow.addStretch()
+        statusRow.addWidget(self.speedLabel)
+        statusRow.addSpacing(15)
+        statusRow.addWidget(self.etaLabel)
+        progressLayout.addLayout(statusRow)
+        
+        downloadCardLayout.addLayout(progressLayout)
 
         # Download button row
         btnRow = QHBoxLayout()
         btnRow.addWidget(self.progressRing)
-        btnRow.addWidget(self.progressBar)
         btnRow.addStretch()
+        btnRow.addWidget(self.cancelBtn)
         btnRow.addWidget(self.downloadBtn)
+        downloadCardLayout.addLayout(btnRow)
 
-        # Status row
-        statusRow = QHBoxLayout()
-        statusRow.addWidget(self.statusLabel)
-        statusRow.addStretch()
+        # Add download card to main layout
+        self.vBoxLayout.addWidget(downloadCard)
 
         # History section
+        historyCard = CardWidget(self)
+        historyCardLayout = QVBoxLayout(historyCard)
+        historyCardLayout.setContentsMargins(20, 20, 20, 20)
+        historyCardLayout.setSpacing(15)
+        
+        # History title row
         historyTitleRow = QHBoxLayout()
-        historyTitleRow.addWidget(QLabel("Download History:"))
+        historyTitle = SubtitleLabel("Download History")
+        historyTitleRow.addWidget(historyTitle)
         historyTitleRow.addStretch()
+        historyTitleRow.addWidget(self.searchInput)
+        historyTitleRow.addWidget(self.exportBtn)
         historyTitleRow.addWidget(self.clearBtn)
-
-        # Add to main layout
-        self.vBoxLayout.addLayout(urlRow)
-        self.vBoxLayout.addLayout(optionsRow)
-        self.vBoxLayout.addLayout(btnRow)
-        self.vBoxLayout.addLayout(statusRow)
-        self.vBoxLayout.addLayout(historyTitleRow)
-        self.vBoxLayout.addWidget(self.historyTable, 1)
+        historyCardLayout.addLayout(historyTitleRow)
+        
+        # Separator
+        separator2 = QFrame()
+        separator2.setFrameShape(QFrame.HLine)
+        separator2.setStyleSheet("background-color: rgba(0, 0, 0, 0.1);")
+        historyCardLayout.addWidget(separator2)
+        
+        # History table
+        historyCardLayout.addWidget(self.historyTable, 1)
+        
+        # Add history card to main layout
+        self.vBoxLayout.addWidget(historyCard, 1)
 
         # Add info bar for instructions
         self.addInfoBar()
@@ -291,15 +287,14 @@ class DownloadHistoryInterface(ScrollArea):
         infoBar = InfoBar(
             icon=InfoBarIcon.INFORMATION,
             title="Welcome to YouTube Downloader",
-            content="Enter a YouTube video or playlist URL above and click Download. "
-                   "You can choose quality, format, and download audio-only versions.",
+            content="Enter a YouTube video or playlist URL and press Ctrl+Enter or click Download. "
+                   "Choose quality, format, and enable audio-only mode as needed.",
             orient=Qt.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,
-            duration=10000,
+            duration=8000,
             parent=self
         )
-        infoBar.addWidget(PushButton("Open Example", self))
         self.vBoxLayout.insertWidget(0, infoBar)
 
     def updateFormatOptions(self):
@@ -354,27 +349,37 @@ class DownloadHistoryInterface(ScrollArea):
         self.current_worker.progressUpdated.connect(self.updateProgress)
         self.current_worker.downloadCompleted.connect(self.downloadCompleted)
         self.current_worker.downloadFailed.connect(self.downloadFailed)
+        self.current_worker.videoInfoFetched.connect(self.showVideoInfo)
         self.current_worker.start()
+        
+        # Show cancel button
+        self.cancelBtn.show()
 
-    def updateProgress(self, progress, video_id):
+    def updateProgress(self, progress, video_id, speed, eta):
         """ Update download progress """
         self.statusLabel.setText(f"Downloading... {progress}%")
         self.progressBar.setValue(progress)
+        self.speedLabel.setText(f"Speed: {speed}")
+        self.etaLabel.setText(f"ETA: {eta}")
 
-    def downloadCompleted(self, video_id, file_path):
+    def downloadCompleted(self, video_id, file_path, title):
         """ Handle completed download """
         self.statusLabel.setText("Download completed!")
         self.progressRing.hide()
         self.progressBar.setVisible(False)
+        self.speedLabel.setText("")
+        self.etaLabel.setText("")
         self.downloadBtn.setEnabled(True)
+        self.cancelBtn.hide()
+        self.videoInfoCard.hide()
 
         # Add to history
-        self.addToHistory(f"Downloaded: {os.path.basename(file_path)}", "Success")
+        self.addToHistory(title, "Success", file_path)
 
         # Show success message
         InfoBar.success(
-            title='Success',
-            content=f'Video downloaded successfully to: {file_path}',
+            title='Download Complete',
+            content=f'{title} downloaded successfully!',
             orient=Qt.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,
@@ -395,13 +400,17 @@ class DownloadHistoryInterface(ScrollArea):
 
     def downloadFailed(self, video_id, error_message):
         """ Handle failed download """
-        self.statusLabel.setText(f"Download failed: {error_message}")
+        self.statusLabel.setText("Download failed")
         self.progressRing.hide()
         self.progressBar.setVisible(False)
+        self.speedLabel.setText("")
+        self.etaLabel.setText("")
         self.downloadBtn.setEnabled(True)
+        self.cancelBtn.hide()
+        self.videoInfoCard.hide()
 
         # Add to history
-        self.addToHistory(f"Failed: {error_message}", "Failed")
+        self.addToHistory(error_message, "Failed", "")
 
         # Show error message
         InfoBar.error(
@@ -414,7 +423,7 @@ class DownloadHistoryInterface(ScrollArea):
             parent=self
         )
 
-    def addToHistory(self, details, status):
+    def addToHistory(self, title, status, file_path):
         """ Add entry to download history """
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -422,7 +431,8 @@ class DownloadHistoryInterface(ScrollArea):
         entry = {
             'timestamp': timestamp,
             'status': status,
-            'details': details
+            'title': title,
+            'path': file_path
         }
 
         # Add to history list
@@ -441,29 +451,111 @@ class DownloadHistoryInterface(ScrollArea):
     def updateHistoryDisplay(self):
         """ Update the history table display """
         self.historyTable.setRowCount(0)  # Clear table
-        for entry in reversed(self.download_history):  # Show newest first
-            self.addHistoryRow(entry)
+        
+        if not self.download_history:
+            # Show empty state message
+            self.historyTable.setRowCount(1)
+            empty_item = QTableWidgetItem("No download history yet. Start downloading videos to see them here!")
+            empty_item.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+            empty_item.setForeground(QColor(128, 128, 128))
+            font = empty_item.font()
+            font.setItalic(True)
+            empty_item.setFont(font)
+            self.historyTable.setItem(0, 0, empty_item)
+            self.historyTable.setSpan(0, 0, 1, 4)  # Span across all columns
+        else:
+            for entry in reversed(self.download_history):  # Show newest first
+                self.addHistoryRow(entry)
 
     def addHistoryRow(self, entry):
-        """ Add history row to table """
+        """ Add history row to table with improved formatting using badges """
         row = self.historyTable.rowCount()
         self.historyTable.insertRow(row)
 
-        # Status column
-        status_item = QTableWidgetItem(entry['status'])
-        if entry['status'] == 'Success':
-            status_item.setBackground(QColor(144, 238, 144))  # Light green
-        elif entry['status'] == 'Failed':
-            status_item.setBackground(QColor(255, 182, 193))  # Light red
-        self.historyTable.setItem(row, 0, status_item)
+        # Status column with badges instead of text
+        status_text = entry['status']
+        
+        # Create a widget to hold the badge
+        status_widget = QWidget()
+        status_layout = QHBoxLayout(status_widget)
+        status_layout.setContentsMargins(8, 0, 8, 0)
+        status_layout.setSpacing(8)
+        
+        if 'Success' in status_text:
+            badge = IconInfoBadge.success(FIF.ACCEPT_MEDIUM)
+            badge.setToolTip("Download completed successfully")
+            status_label = BodyLabel("Success")
+            status_label.setStyleSheet("color: #10893E;")
+        elif 'Failed' in status_text:
+            badge = IconInfoBadge.error(FIF.CANCEL_MEDIUM)
+            error_msg = entry.get('title', 'Download failed')
+            badge.setToolTip(f"Error: {error_msg}")
+            status_label = BodyLabel("Failed")
+            status_label.setStyleSheet("color: #D13438;")
+        else:
+            badge = DotInfoBadge.info()
+            status_label = BodyLabel(status_text)
+        
+        status_layout.addWidget(badge)
+        status_layout.addWidget(status_label)
+        status_layout.addStretch()
+        
+        self.historyTable.setCellWidget(row, 0, status_widget)
 
-        # Time column
-        time_item = QTableWidgetItem(entry['timestamp'])
+        # Time column with better formatting
+        timestamp = entry['timestamp']
+        try:
+            # Parse and reformat timestamp for better display
+            dt = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+            today = datetime.now().date()
+            
+            if dt.date() == today:
+                # Show "Today" for today's downloads
+                time_display = f"Today {dt.strftime('%H:%M:%S')}"
+            elif dt.date() == today - timedelta(days=1):
+                # Show "Yesterday" for yesterday's downloads
+                time_display = f"Yesterday {dt.strftime('%H:%M:%S')}"
+            else:
+                # Show full date for older downloads
+                time_display = dt.strftime('%Y-%m-%d %H:%M')
+        except:
+            time_display = timestamp
+            
+        time_item = QTableWidgetItem(time_display)
+        time_item.setToolTip(f"Downloaded on {timestamp}")
+        time_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.historyTable.setItem(row, 1, time_item)
 
-        # Details column
-        details_item = QTableWidgetItem(entry['details'])
-        self.historyTable.setItem(row, 2, details_item)
+        # Title column with truncation and tooltip
+        title_text = entry.get('title', entry.get('details', 'Unknown'))
+        title_item = QTableWidgetItem(title_text)
+        title_item.setToolTip(title_text)  # Full title on hover
+        title_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        
+        # Make title bold for successful downloads
+        if 'Success' in status_text:
+            font = title_item.font()
+            font.setBold(False)  # Keep normal weight for readability
+            title_item.setFont(font)
+        
+        self.historyTable.setItem(row, 2, title_item)
+        
+        # Path column with folder icon and shortened display
+        file_path = entry.get('path', '')
+        if file_path:
+            # Show just filename, not full path
+            filename = os.path.basename(file_path)
+            path_item = QTableWidgetItem(f"  {filename}")
+            path_item.setIcon(FIF.FOLDER.icon())
+            path_item.setToolTip(f"Full path: {file_path}\nDouble-click to open")
+            path_item.setForeground(QColor(0, 120, 215))  # Blue for clickable items
+        else:
+            path_item = QTableWidgetItem("  N/A")
+            path_item.setForeground(QColor(128, 128, 128))  # Gray for N/A
+            path_item.setToolTip("File path not available")
+            
+        path_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.historyTable.setItem(row, 3, path_item)
 
     def clearHistory(self):
         """ Clear history """
@@ -504,3 +596,121 @@ class DownloadHistoryInterface(ScrollArea):
             duration=3000,
             parent=self
         )
+    
+    def cancelDownload(self):
+        """ Cancel current download """
+        if self.current_worker and self.current_worker.isRunning():
+            self.current_worker.cancel()
+            self.current_worker.wait()
+            self.statusLabel.setText("Download cancelled")
+            self.progressRing.hide()
+            self.progressBar.setVisible(False)
+            self.speedLabel.setText("")
+            self.etaLabel.setText("")
+            self.downloadBtn.setEnabled(True)
+            self.cancelBtn.hide()
+            self.videoInfoCard.hide()
+            
+            InfoBar.warning(
+                title='Cancelled',
+                content='Download was cancelled by user',
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+    
+    def showVideoInfo(self, title, duration, thumbnail_url):
+        """ Show video information """
+        self.videoTitleLabel.setText(title)
+        try:
+            duration_int = int(duration)
+            minutes = duration_int // 60
+            seconds = duration_int % 60
+            self.videoDurationLabel.setText(f"Duration: {minutes}:{seconds:02d}")
+        except:
+            self.videoDurationLabel.setText("Duration: Unknown")
+        self.videoInfoCard.show()
+    
+    def filterHistory(self, text):
+        """ Filter history based on search text """
+        for row in range(self.historyTable.rowCount()):
+            should_show = False
+            for col in range(self.historyTable.columnCount()):
+                item = self.historyTable.item(row, col)
+                if item and text.lower() in item.text().lower():
+                    should_show = True
+                    break
+            self.historyTable.setRowHidden(row, not should_show)
+    
+    def exportHistory(self):
+        """ Export history to file """
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Export History", "download_history.txt", "Text Files (*.txt);;CSV Files (*.csv)"
+        )
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    if file_path.endswith('.csv'):
+                        f.write("Status,Time,Title,Path\n")
+                        for entry in self.download_history:
+                            f.write(f'"{entry["status"]}","{entry["timestamp"]}","{entry.get("title", "")}","{entry.get("path", "")}"\n')
+                    else:
+                        for entry in self.download_history:
+                            f.write(f"{entry['status']} | {entry['timestamp']} | {entry.get('title', '')} | {entry.get('path', '')}\n")
+                
+                InfoBar.success(
+                    title='Exported',
+                    content=f'History exported to {file_path}',
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
+            except Exception as e:
+                self.showError(f"Failed to export history: {str(e)}")
+    
+    def showHistoryContextMenu(self, pos):
+        """ Show context menu for history table """
+        item = self.historyTable.itemAt(pos)
+        if item:
+            row = item.row()
+            path_item = self.historyTable.item(row, 3)
+            if path_item and path_item.text():
+                menu = RoundMenu(parent=self)
+                
+                openFileAction = Action(FIF.DOCUMENT, "Open File")
+                openFileAction.triggered.connect(lambda: self.openFile(path_item.text()))
+                menu.addAction(openFileAction)
+                
+                openFolderAction = Action(FIF.FOLDER, "Open Folder")
+                openFolderAction.triggered.connect(lambda: self.openFolder(path_item.text()))
+                menu.addAction(openFolderAction)
+                
+                copyPathAction = Action(FIF.COPY, "Copy Path")
+                copyPathAction.triggered.connect(lambda: QApplication.clipboard().setText(path_item.text()))
+                menu.addAction(copyPathAction)
+                
+                menu.exec(self.historyTable.mapToGlobal(pos))
+    
+    def openHistoryFile(self, index):
+        """ Open file from history on double click """
+        path_item = self.historyTable.item(index.row(), 3)
+        if path_item and path_item.text():
+            self.openFile(path_item.text())
+    
+    def openFile(self, file_path):
+        """ Open file """
+        if os.path.exists(file_path):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
+        else:
+            self.showError("File not found")
+    
+    def openFolder(self, file_path):
+        """ Open folder containing file """
+        if os.path.exists(file_path):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(file_path)))
+        else:
+            self.showError("Folder not found")
