@@ -40,6 +40,10 @@ class DownloadWorker(QThread):
         self._ydl = None  # Store yt-dlp instance for cancellation
         self._start_time = None
         
+        # Progress tracking to prevent jumping
+        self._last_progress = 0
+        self._last_total_bytes = 0
+        
         logger.info(f"DownloadWorker created: URL={url[:50]}..., Quality={quality}, Format={format_type}, AudioOnly={is_audio_only}")
 
     def run(self):
@@ -209,15 +213,34 @@ class DownloadWorker(QThread):
             downloaded = d.get('downloaded_bytes', 0)
             total = d.get('total_bytes') or d.get('total_bytes_estimate', 0)
             
-            if total > 0:
-                progress_int = int((downloaded / total) * 100)
+            # If we've already reached 100%, stay there
+            if self._last_progress >= 100:
+                progress_int = 100
             else:
-                # Fallback: parse formatted string
-                percent_str = d.get('_percent_str', '0%')
-                try:
-                    progress_int = int(float(percent_str.replace('%', '').strip()))
-                except (ValueError, AttributeError):
-                    progress_int = 0
+                # Detect new file (video+audio separate downloads)
+                if total != self._last_total_bytes and self._last_total_bytes > 0:
+                    logger.info(f"New file detected, continuing from {self._last_progress}%")
+                
+                self._last_total_bytes = total
+                
+                if total > 0:
+                    progress_int = int((downloaded / total) * 100)
+                else:
+                    # Fallback: parse formatted string
+                    percent_str = d.get('_percent_str', '0%')
+                    try:
+                        progress_int = int(float(percent_str.replace('%', '').strip()))
+                    except (ValueError, AttributeError):
+                        progress_int = 0
+                
+                # Clamp to 0-100
+                progress_int = max(0, min(100, progress_int))
+                
+                # Never go backwards
+                if progress_int < self._last_progress:
+                    progress_int = self._last_progress
+                
+                self._last_progress = progress_int
             
             # Get speed (prefer raw bytes/sec for accuracy)
             speed_bytes = d.get('speed')

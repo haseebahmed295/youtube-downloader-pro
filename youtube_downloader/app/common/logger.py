@@ -5,7 +5,6 @@ Logging configuration for YouTube Downloader
 import logging
 import os
 import sys
-from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from PySide6.QtCore import QStandardPaths
 
@@ -36,6 +35,7 @@ class ColoredFormatter(logging.Formatter):
 def setup_logger(name='YouTubeDownloader', level=logging.INFO):
     """
     Set up application logger with file and console handlers
+    Each session creates a new log file with timestamp
     
     Args:
         name: Logger name
@@ -60,14 +60,14 @@ def setup_logger(name='YouTubeDownloader', level=logging.INFO):
     )
     os.makedirs(log_dir, exist_ok=True)
     
-    # Log file path
-    log_file = os.path.join(log_dir, 'youtube_downloader.log')
+    # Session-based log file with timestamp
+    session_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_file = os.path.join(log_dir, f'session_{session_timestamp}.log')
     
-    # File handler with rotation (10MB max, keep 5 backups)
-    file_handler = RotatingFileHandler(
+    # File handler for session log (no rotation needed since each session has its own file)
+    file_handler = logging.FileHandler(
         log_file,
-        maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=5,
+        mode='w',  # Write mode - new file for each session
         encoding='utf-8'
     )
     file_handler.setLevel(logging.DEBUG)  # Log everything to file

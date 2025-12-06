@@ -43,6 +43,12 @@ class DownloadTask(QRunnable):
         self.completed_callback = completed_callback
         self.failed_callback = failed_callback
         
+        # Progress tracking to prevent jumping
+        self._last_progress = 0
+        self._last_update_time = 0
+        self._update_interval = 0.5  # Update UI every 0.5 seconds
+        self._last_total_bytes = 0  # Track total bytes to detect new file downloads
+        
         # Update output template for this specific file
         self.download_opts['outtmpl'] = os.path.join(
             self.download_opts['outtmpl_base'],
@@ -55,19 +61,67 @@ class DownloadTask(QRunnable):
         
     def progress_hook(self, d):
         """Handle progress for this specific download"""
-        if self._is_cancelled or d.get('status') != 'downloading':
+        if self._is_cancelled:
+            return
+        
+        status = d.get('status')
+        
+        if status != 'downloading':
             return
             
         downloaded = d.get('downloaded_bytes', 0)
         total = d.get('total_bytes') or d.get('total_bytes_estimate', 0)
         
-        progress = int((downloaded / total) * 100) if total > 0 else 0
+        # Validate data
+        if total <= 0:
+            return
+        
+        if downloaded > total:
+            downloaded = total
+        
+        # If we've already reached 100%, stay there
+        if self._last_progress >= 100:
+            progress = 100
+        else:
+            # Detect if this is a new file download (yt-dlp downloads video+audio separately)
+            if total != self._last_total_bytes and self._last_total_bytes > 0:
+                logger.info(f"[Task {self.index}] New file detected, continuing from {self._last_progress}%")
+                self._last_update_time = 0
+            
+            self._last_total_bytes = total
+            
+            # Calculate current file progress (0-100)
+            progress = int((downloaded / total) * 100) if total > 0 else 0
+            progress = max(0, min(100, progress))
+            
+            # Ensure progress never goes backwards
+            if progress < self._last_progress:
+                progress = self._last_progress
+        
+        # Throttle updates to prevent UI jumping (update every 0.5s or on significant change)
+        current_time = time.time()
+        time_since_update = current_time - self._last_update_time
+        progress_change = abs(progress - self._last_progress)
+        
+        # Update if: enough time passed OR significant progress change (>5%) OR reached 100%
+        should_update = (
+            time_since_update >= self._update_interval or 
+            progress_change >= 5 or 
+            progress == 100
+        )
+        
+        if not should_update:
+            return
         
         speed_bytes = d.get('speed')
         speed = format_speed(speed_bytes) if speed_bytes else 'Calculating...'
         
         eta_seconds = d.get('eta')
         eta = format_eta(eta_seconds) if eta_seconds else 'Calculating...'
+        
+        # Update tracking variables
+        self._last_progress = progress
+        self._last_update_time = current_time
         
         # Use callback instead of signal
         if self.progress_callback:
@@ -271,7 +325,6 @@ class ConcurrentPlaylistWorker(QThread):
         # Don't emit if cancelled
         if self._is_cancelled:
             return
-        logger.info(f"Worker received started callback for task {index}")
         self.fileStarted.emit(index, total, title)
     
     def _on_task_progress(self, index, progress, speed, eta):
