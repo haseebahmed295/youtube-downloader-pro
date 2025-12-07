@@ -12,8 +12,9 @@ from qfluentwidgets import setTheme, Theme
 
 from app.common.config import cfg
 from app.resource.resource import getAppIcon
-from app.view.download_history_interface import DownloadHistoryInterface
+from app.view.single_download_interface import SingleDownloadInterface
 from app.view.playlist_interface import PlaylistInterface
+from app.view.history_interface import HistoryInterface
 from app.view.settings_interface import SettingsInterface
 from app.view.about_interface import AboutInterface
 
@@ -30,8 +31,9 @@ class MainWindow(FluentWindow):
         self.setInitialTheme()
 
         # create sub interfaces
-        self.downloadHistoryInterface = DownloadHistoryInterface(self)
+        self.singleDownloadInterface = SingleDownloadInterface(self)
         self.playlistInterface = PlaylistInterface(self)
+        self.historyInterface = HistoryInterface(self)
         self.settingsInterface = SettingsInterface(self)
         self.aboutInterface = AboutInterface(self)
 
@@ -42,6 +44,10 @@ class MainWindow(FluentWindow):
 
         # add items to navigation interface
         self.initNavigation()
+        
+        # Clean up incomplete downloads from previous session
+        self.cleanupIncompleteDownloads()
+        
         self.splashScreen.finish()
 
         # start theme listener
@@ -62,11 +68,24 @@ class MainWindow(FluentWindow):
 
     def initNavigation(self):
         """ Initialize navigation items """
-        # add navigation items
-        self.addSubInterface(self.downloadHistoryInterface, FIF.DOWNLOAD, "Download & History")
-        self.addSubInterface(self.playlistInterface, FIF.MENU, "Playlist Download")
-        self.addSubInterface(self.settingsInterface, FIF.SETTING, "Settings")
-        self.addSubInterface(self.aboutInterface, FIF.INFO, "About")
+        # add main navigation items at top
+        self.addSubInterface(self.singleDownloadInterface, FIF.DOWNLOAD, "Download")
+        self.addSubInterface(self.playlistInterface, FIF.LIBRARY, "Playlist")
+        self.addSubInterface(self.historyInterface, FIF.HISTORY, "History")
+        
+        # add settings and about at bottom
+        self.addSubInterface(
+            self.settingsInterface, 
+            FIF.SETTING, 
+            "Settings",
+            position=NavigationItemPosition.BOTTOM
+        )
+        self.addSubInterface(
+            self.aboutInterface, 
+            FIF.INFO, 
+            "About",
+            position=NavigationItemPosition.BOTTOM
+        )
 
         # add custom widget to bottom
         self.navigationInterface.addItem(
@@ -137,3 +156,20 @@ class MainWindow(FluentWindow):
         # retry
         if self.isMicaEffectEnabled():
             QTimer.singleShot(100, lambda: self.windowEffect.setMicaEffect(self.winId(), isDarkTheme()))
+    
+    def cleanupIncompleteDownloads(self):
+        """ Clean up downloads that were in progress when app closed """
+        download_history = cfg.get(cfg.downloadHistory) or []
+        modified = False
+        
+        for entry in download_history:
+            if entry.get('status') == 'Downloading':
+                # Mark as incomplete/interrupted
+                entry['status'] = 'Interrupted'
+                modified = True
+        
+        if modified:
+            cfg.set(cfg.downloadHistory, download_history)
+            # Refresh history interface
+            if hasattr(self, 'historyInterface'):
+                self.historyInterface.refreshHistory()

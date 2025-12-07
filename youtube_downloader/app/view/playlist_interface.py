@@ -435,6 +435,9 @@ class PlaylistInterface(ScrollArea):
             self.totalBadge.deleteLater()
             self.totalBadge = None
         
+        # Add to history immediately with "Downloading" status
+        self.current_history_index = self.addToHistoryStart(url)
+        
         # Show progress
         self.statusLabel.setText("Fetching playlist info...")
         self.progressRing.show()
@@ -475,6 +478,13 @@ class PlaylistInterface(ScrollArea):
         clean_title = clean_unicode_text(title) if title else "Playlist"
         self.playlistTitleLabel.setText(f"Playlist: {clean_title}")
         self.playlistCountLabel.setText("")  # Remove text, badges will show the info
+        
+        # Update history with actual playlist title
+        download_history = cfg.get(cfg.downloadHistory) or []
+        if 0 <= self.current_history_index < len(download_history):
+            download_history[self.current_history_index]['title'] = clean_title
+            cfg.set(cfg.downloadHistory, download_history)
+            self.notifyHistoryUpdate()
         
         # Add badges to their respective containers
         # Total badge
@@ -562,12 +572,86 @@ class PlaylistInterface(ScrollArea):
         self.downloadBtn.setEnabled(True)
         self.cancelBtn.hide()
         
+        # Update history with final status
+        self.updateHistoryComplete(success_count, fail_count)
+        
         InfoBar.success(
             title='Playlist Download Complete',
             content=f'{success_count} videos downloaded successfully!',
             parent=self
         )
         
+    def addToHistoryStart(self, url):
+        """Add playlist to history when starting download"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Create initial history entry
+        entry = {
+            'timestamp': timestamp,
+            'status': 'Downloading',
+            'title': url,  # Will be updated with actual title
+            'path': cfg.get(cfg.downloadFolder),
+            'type': 'playlist',
+            'items': []
+        }
+        
+        # Get existing history
+        download_history = cfg.get(cfg.downloadHistory) or []
+        
+        # Add to history list
+        download_history.append(entry)
+        history_index = len(download_history) - 1
+        
+        # Keep history limited
+        if len(download_history) > cfg.get(cfg.historyLimit):
+            download_history.pop(0)
+            history_index -= 1
+        
+        # Save to config
+        cfg.set(cfg.downloadHistory, download_history)
+        
+        # Notify history interface
+        self.notifyHistoryUpdate()
+        
+        return history_index
+    
+    def updateHistoryComplete(self, success_count, fail_count):
+        """Update playlist history when download completes"""
+        download_history = cfg.get(cfg.downloadHistory) or []
+        
+        if 0 <= self.current_history_index < len(download_history):
+            # Get playlist title
+            playlist_title = self.playlistTitleLabel.text().replace("Playlist: ", "")
+            
+            # Collect all playlist items from file cards
+            items = []
+            for index, card in self.file_cards.items():
+                item_status = "Success" if card.progressBar.value() == 100 else "Failed"
+                items.append({
+                    'status': item_status,
+                    'title': card.title,
+                    'path': ''  # Individual paths not tracked for playlist items
+                })
+            
+            # Update entry
+            download_history[self.current_history_index]['title'] = playlist_title
+            download_history[self.current_history_index]['status'] = f"Success ({success_count}/{success_count + fail_count})" if success_count > 0 else "Failed"
+            download_history[self.current_history_index]['items'] = items
+            
+            # Save to config
+            cfg.set(cfg.downloadHistory, download_history)
+            
+            # Notify history interface
+            self.notifyHistoryUpdate()
+    
+    def notifyHistoryUpdate(self):
+        """Notify history interface to refresh"""
+        # Find history interface and refresh it
+        main_window = self.window()
+        if hasattr(main_window, 'historyInterface'):
+            main_window.historyInterface.refreshHistory()
+    
     def cancelDownload(self):
         """Cancel download"""
         if self.current_worker and self.current_worker.isRunning():
@@ -576,3 +660,11 @@ class PlaylistInterface(ScrollArea):
             self.downloadBtn.setEnabled(True)
             self.cancelBtn.hide()
             self.progressRing.hide()
+            
+            # Update history entry to cancelled
+            if hasattr(self, 'current_history_index'):
+                download_history = cfg.get(cfg.downloadHistory) or []
+                if 0 <= self.current_history_index < len(download_history):
+                    download_history[self.current_history_index]['status'] = 'Cancelled'
+                    cfg.set(cfg.downloadHistory, download_history)
+                    self.notifyHistoryUpdate()

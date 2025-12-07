@@ -14,12 +14,12 @@ youtube_downloader/           # Main application package
 │   │   ├── playlist_worker.py              # Playlist processing
 │   │   └── concurrent_playlist_worker.py   # Concurrent playlist downloads
 │   ├── view/                # UI interfaces (Qt widgets)
-│   │   ├── main_window.py              # Main application window
-│   │   ├── download_interface.py       # Single download UI
-│   │   ├── playlist_interface.py       # Playlist download UI
-│   │   ├── download_history_interface.py  # History tracking UI
-│   │   ├── settings_interface.py       # Settings panel
-│   │   └── about_interface.py          # About page
+│   │   ├── main_window.py                  # Main application window
+│   │   ├── single_download_interface.py    # Single video download UI
+│   │   ├── playlist_interface.py           # Playlist download UI
+│   │   ├── history_interface.py            # Download history UI (separate tab)
+│   │   ├── settings_interface.py           # Settings panel
+│   │   └── about_interface.py              # About page
 │   └── resource/            # Application resources
 │       └── resource.py      # Resource management
 ├── main.py                  # Application entry point
@@ -36,6 +36,7 @@ app/download/                 # Default download directory
 - **Configuration management**: Centralized config in `app/common/config.py`
 - **Logging**: Structured logging via `app/common/logger.py`
 - **FluentWindow**: Main window extends `FluentWindow` from PyQt-Fluent-Widgets for modern UI
+- **Separate interfaces**: Download, Playlist, and History are now separate tabs for better organization
 
 ## Code Organization Conventions
 
