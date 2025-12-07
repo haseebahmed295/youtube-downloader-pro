@@ -16,6 +16,7 @@ from qfluentwidgets import FluentTranslator
 from app.common.config import cfg
 from app.common.logger import setup_logger, get_logger
 from app.view.main_window import MainWindow
+from app.resource.resource import getAppIcon
 
 def main():
     # Set up logging first
@@ -33,6 +34,19 @@ def main():
         logger.info("Creating QApplication...")
         app = QApplication(sys.argv)
         app.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings)
+        
+        # Set application icon for taskbar (Windows)
+        app.setWindowIcon(getAppIcon())
+        
+        # Set AppUserModelID for Windows taskbar icon
+        if sys.platform == 'win32':
+            try:
+                import ctypes
+                myappid = 'com.youtubedownloader.app.1.0'  # arbitrary string
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+                logger.debug("Windows AppUserModelID set for taskbar icon")
+            except Exception as e:
+                logger.warning(f"Could not set AppUserModelID: {e}")
 
         # Internationalization
         from PySide6.QtCore import QLocale

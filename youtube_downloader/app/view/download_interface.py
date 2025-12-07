@@ -7,7 +7,7 @@ from qfluentwidgets import (ScrollArea, PushButton, LineEdit, ComboBox, SwitchBu
                             ProgressBar, InfoBar, InfoBarPosition, InfoBarIcon,
                             CardWidget, BodyLabel, CaptionLabel, PrimaryPushButton,
                             ToolButton, FluentIcon as FIF, RoundMenu, Action,
-                            IndeterminateProgressRing, MessageBox)
+                            IndeterminateProgressRing, MessageBox, SubtitleLabel, StrongBodyLabel)
 import yt_dlp
 import os
 import time
@@ -202,8 +202,9 @@ class DownloadInterface(ScrollArea):
         self.vBoxLayout.setAlignment(Qt.AlignTop)
 
         # Configure URL input
-        self.urlInput.setPlaceholderText("Enter YouTube URL here...")
+        self.urlInput.setPlaceholderText("Paste YouTube URL here (Ctrl+V)")
         self.urlInput.setClearButtonEnabled(True)
+        self.urlInput.setMinimumHeight(40)  # Taller input for better accessibility
 
         # Configure quality combo
         self.qualityCombo.addItems(["1080p", "720p", "480p", "360p", "Best Available"])
@@ -226,40 +227,91 @@ class DownloadInterface(ScrollArea):
 
     def __initLayout(self):
         """ Initialize layout """
-        # URL input row
-        urlRow = QHBoxLayout()
-        urlRow.addWidget(QLabel("YouTube URL:"))
-        urlRow.addWidget(self.urlInput, 1)
+        self.vBoxLayout.setContentsMargins(20, 20, 20, 20)
+        
+        # Main input card
+        inputCard = CardWidget(self.view)
+        inputLayout = QVBoxLayout(inputCard)
+        inputLayout.setContentsMargins(24, 24, 24, 24)
+        inputLayout.setSpacing(20)
 
-        # Options row
-        optionsRow = QHBoxLayout()
-        optionsRow.addWidget(QLabel("Quality:"))
-        optionsRow.addWidget(self.qualityCombo)
-        optionsRow.addSpacing(20)
-        optionsRow.addWidget(QLabel("Format:"))
-        optionsRow.addWidget(self.formatCombo)
-        optionsRow.addSpacing(20)
-        optionsRow.addWidget(self.audioOnlySwitch)
-        optionsRow.addStretch()
+        # Header
+        headerLayout = QHBoxLayout()
+        titleLabel = SubtitleLabel("Download Video")
+        headerLayout.addWidget(titleLabel)
+        headerLayout.addStretch()
+        inputLayout.addLayout(headerLayout)
 
-        # Download button row
-        btnRow = QHBoxLayout()
-        btnRow.addWidget(self.progressRing)
-        btnRow.addStretch()
-        btnRow.addWidget(self.downloadBtn)
+        # URL Input Section
+        urlLayout = QVBoxLayout()
+        urlLayout.setSpacing(8)
+        urlLabel = StrongBodyLabel("Video URL")
+        urlLayout.addWidget(urlLabel)
+        urlLayout.addWidget(self.urlInput)
+        inputLayout.addLayout(urlLayout)
 
-        # Status row
-        statusRow = QHBoxLayout()
-        statusRow.addWidget(self.statusLabel)
-        statusRow.addStretch()
+        # Options Section
+        optionsLayout = QVBoxLayout()
+        optionsLayout.setSpacing(8)
+        optionsLabel = StrongBodyLabel("Download Options")
+        optionsLayout.addWidget(optionsLabel)
+        
+        settingsRow = QHBoxLayout()
+        settingsRow.setSpacing(24)
+        
+        # Quality
+        qualityLayout = QVBoxLayout()
+        qualityLayout.setSpacing(4)
+        qualityLayout.addWidget(BodyLabel("Quality"))
+        qualityLayout.addWidget(self.qualityCombo)
+        settingsRow.addLayout(qualityLayout)
+        
+        # Format
+        formatLayout = QVBoxLayout()
+        formatLayout.setSpacing(4)
+        formatLayout.addWidget(BodyLabel("Format"))
+        formatLayout.addWidget(self.formatCombo)
+        settingsRow.addLayout(formatLayout)
+        
+        # Audio Toggle
+        # Group switch with label for consistency
+        switchLayout = QVBoxLayout()
+        switchLayout.setSpacing(4)
+        switchLayout.addWidget(BodyLabel("Mode"))
+        switchLayout.addWidget(self.audioOnlySwitch)
+        settingsRow.addLayout(switchLayout)
+        
+        settingsRow.addStretch()
+        optionsLayout.addLayout(settingsRow)
+        inputLayout.addLayout(optionsLayout)
 
-        # Add to main layout
-        self.vBoxLayout.addLayout(urlRow)
-        self.vBoxLayout.addLayout(optionsRow)
-        self.vBoxLayout.addLayout(btnRow)
-        self.vBoxLayout.addLayout(statusRow)
-        self.vBoxLayout.addWidget(QLabel("Download History:"))
-        self.vBoxLayout.addWidget(self.historyList, 1)
+        # Action Section
+        actionLayout = QHBoxLayout()
+        actionLayout.addWidget(self.progressRing)
+        actionLayout.addStretch()
+        
+        self.downloadBtn.setFixedWidth(160) # Make button wider for easier clicking
+        actionLayout.addWidget(self.downloadBtn)
+        inputLayout.addLayout(actionLayout)
+        
+        # Status area
+        inputLayout.addWidget(self.statusLabel)
+
+        # Add card to main layout
+        self.vBoxLayout.addWidget(inputCard)
+
+        # History Section
+        historyContainer = QWidget()
+        historyContainerLayout = QVBoxLayout(historyContainer)
+        historyContainerLayout.setContentsMargins(0, 20, 0, 0)
+        historyContainerLayout.setSpacing(10)
+        
+        historyHeader = StrongBodyLabel("Download History")
+        historyContainerLayout.addWidget(historyHeader)
+        historyContainerLayout.addWidget(self.historyList)
+        
+        self.vBoxLayout.addWidget(historyContainer)
+        self.vBoxLayout.addStretch()
 
     def addInfoBar(self):
         """ Add information bar with instructions """

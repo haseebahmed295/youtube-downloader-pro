@@ -10,6 +10,7 @@ from qfluentwidgets import (NavigationAvatarWidget, NavigationItemPosition, Mess
 from qfluentwidgets import setTheme, Theme
 
 from app.common.config import cfg
+from app.resource.resource import getAppIcon
 from app.view.download_history_interface import DownloadHistoryInterface
 from app.view.playlist_interface import PlaylistInterface
 from app.view.settings_interface import SettingsInterface
@@ -81,14 +82,14 @@ class MainWindow(FluentWindow):
         """ Initialize window """
         self.resize(1000, 800)
         self.setMinimumWidth(800)
-        self.setWindowIcon(QIcon(':/qfluentwidgets/images/logo.png'))
+        self.setWindowIcon(getAppIcon())
         self.setWindowTitle('YouTube Downloader')
 
         self.setMicaEffectEnabled(cfg.get(cfg.micaEnabled))
 
         # create splash screen
         self.splashScreen = SplashScreen(self.windowIcon(), self)
-        self.splashScreen.setIconSize(QSize(106, 106))
+        self.splashScreen.setIconSize(QSize(200, 200))  # Increased from 106x106
         self.splashScreen.raise_()
 
         desktop = QApplication.screens()[0].availableGeometry()
