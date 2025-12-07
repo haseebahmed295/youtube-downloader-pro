@@ -1,9 +1,10 @@
 # coding: utf-8
+import re
 import time
 from typing import List
 from PySide6.QtCore import Qt, Signal, QEasingCurve, QUrl, QSize, QTimer
-from PySide6.QtGui import QIcon, QDesktopServices, QColor
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QFrame, QWidget
+from PySide6.QtGui import QIcon, QDesktopServices, QColor, QPixmap
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QFrame, QWidget, QLabel
 
 from qfluentwidgets import (NavigationAvatarWidget, NavigationItemPosition, MessageBox, FluentWindow,
                             SplashScreen, SystemThemeListener, isDarkTheme, FluentIcon as FIF)
@@ -86,7 +87,25 @@ class MainWindow(FluentWindow):
         self.setWindowTitle('YouTube Downloader')
 
         self.setMicaEffectEnabled(cfg.get(cfg.micaEnabled))
-
+        
+        # Replace the back button with app icon label
+        return_btn = self.navigationInterface.panel.returnButton
+        return_btn.setIcon(QIcon())
+        
+        # Create a QLabel with the app icon
+        icon_label = QLabel(self.navigationInterface.panel)
+        pixmap = getAppIcon().pixmap(QSize(27, 27))  # Create 32x32 icon (reduced from 48)
+        icon_label.setPixmap(pixmap)
+        icon_label.setFixedSize(48, 48)  # Container size (reduced from 60)
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_label.setStyleSheet("QLabel { background: transparent; }")
+        
+        # Position the icon label where the return button was
+        icon_label.move(return_btn.pos())
+        icon_label.show()
+        
+        # Hide the title bar icon to avoid duplication
+        self.titleBar.iconLabel.hide()
         # create splash screen
         self.splashScreen = SplashScreen(self.windowIcon(), self)
         self.splashScreen.setIconSize(QSize(200, 200))  # Increased from 106x106
