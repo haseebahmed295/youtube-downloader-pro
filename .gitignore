@@ -16,3 +16,4 @@ installer_build/.wix/
 installer_build/output/*.msi
 installer_build/1.0/*.msi
 installer_build/ffmpeg/
+installer_build/installer_build/1.0/Setup-v1.msi
