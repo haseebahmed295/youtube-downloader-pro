@@ -1,0 +1,32 @@
+# Include documentation
+include README.md
+include LICENSE
+include requirements.txt
+
+# Include setup scripts
+include setup.bat
+include setup.sh
+
+# Include documentation files
+recursive-include docs *.md
+
+# Include resource files
+recursive-include youtube_downloader/app/resource *
+
+# Exclude unnecessary files
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude .git*
+
+# Exclude test files
+exclude test.py
+exclude test_badges.py
+
+# Exclude download directory
+prune download
+prune app/download
+
+# Exclude PyQt-Fluent-Widgets source (users will install via pip)
+prune PyQt-Fluent-Widgets-PySide6

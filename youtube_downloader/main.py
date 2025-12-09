@@ -18,22 +18,26 @@ from app.common.logger import setup_logger, get_logger
 from app.view.main_window import MainWindow
 from app.resource.resource import getAppIcon
 
+# Add the app directory to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 def main():
-    # Set up logging first
-    logger = setup_logger(level='DEBUG')  # Change to 'DEBUG' for more verbose logging
-    logger.info("Initializing YouTube Downloader...")
-    
     try:
+        # Create application FIRST (required for QStandardPaths used by logger and config)
+        app = QApplication(sys.argv)
+        app.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings)
+        
+        # Now set up logging (after QApplication exists)
+        logger = setup_logger(level='DEBUG')  # Change to 'DEBUG' for more verbose logging
+        logger.info("Initializing YouTube Downloader...")
+        
         # Enable DPI scaling
         if cfg.get(cfg.dpiScale) != "Auto":
             os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
             os.environ["QT_SCALE_FACTOR"] = str(cfg.get(cfg.dpiScale))
             logger.debug(f"DPI Scale set to: {cfg.get(cfg.dpiScale)}")
-
-        # Create application
-        logger.info("Creating QApplication...")
-        app = QApplication(sys.argv)
-        app.setAttribute(Qt.AA_DontCreateNativeWidgetSiblings)
+        
+        logger.info("QApplication created successfully")
         
         # Set application icon for taskbar (Windows)
         app.setWindowIcon(getAppIcon())
@@ -48,17 +52,6 @@ def main():
             except Exception as e:
                 logger.warning(f"Could not set AppUserModelID: {e}")
 
-        # Internationalization
-        from PySide6.QtCore import QLocale
-        locale_str = cfg.get(cfg.language)
-        locale = QLocale(locale_str) if locale_str else QLocale()
-        translator = FluentTranslator(locale)
-        appTranslator = QTranslator()
-        appTranslator.load(locale, "youtube_downloader", ".", ":/i18n")
-
-        app.installTranslator(translator)
-        app.installTranslator(appTranslator)
-        logger.info(f"Language set to: {locale_str or 'system default'}")
 
         # Create main window
         logger.info("Creating main window...")

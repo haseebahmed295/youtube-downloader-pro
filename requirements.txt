@@ -1,9 +1,8 @@
-PyQt-Fluent-Widgets[full]>=6.0.0
-yt-dlp>=2023.7.6
+PySide6-Fluent-Widgets[full] 
+yt-dlp
 ffmpeg-python>=0.2.0
 PySide6>=6.4.2
 PySideSix-Frameless-Window>=0.4.0
 darkdetect
 colorthief
-scipy
 pillow

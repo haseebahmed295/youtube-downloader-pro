@@ -132,3 +132,81 @@ def format_eta(eta_seconds):
         minutes = int(eta_seconds // 60)
         seconds = int(eta_seconds % 60)
         return f"{minutes:02d}:{seconds:02d}"
+
+
+def extract_video_id_from_url(url):
+    """
+    Extract video ID from YouTube URL and construct clean video URL
+    
+    Args:
+        url: YouTube URL (may contain playlist parameters)
+        
+    Returns:
+        tuple: (clean_video_url, video_id) or (None, None) if no video ID found
+        
+    Examples:
+        https://www.youtube.com/watch?v=nYuX1HoWPO0&list=RDm82P6WokM7I&index=13
+        -> https://www.youtube.com/watch?v=nYuX1HoWPO0
+        
+        https://youtu.be/nYuX1HoWPO0?list=PLxxx
+        -> https://www.youtube.com/watch?v=nYuX1HoWPO0
+    """
+    if not url:
+        return None, None
+    
+    # Pattern 1: Standard watch URL with v= parameter
+    # https://www.youtube.com/watch?v=VIDEO_ID&other=params
+    match = re.search(r'[?&]v=([a-zA-Z0-9_-]{11})', url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/watch?v={video_id}", video_id
+    
+    # Pattern 2: Short URL format
+    # https://youtu.be/VIDEO_ID or https://youtu.be/VIDEO_ID?list=xxx
+    match = re.search(r'youtu\.be/([a-zA-Z0-9_-]{11})', url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/watch?v={video_id}", video_id
+    
+    # Pattern 3: Embed URL
+    # https://www.youtube.com/embed/VIDEO_ID
+    match = re.search(r'/embed/([a-zA-Z0-9_-]{11})', url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/watch?v={video_id}", video_id
+    
+    return None, None
+
+
+def is_playlist_only_url(url):
+    """
+    Check if URL is a pure playlist URL (no video ID)
+    
+    Args:
+        url: YouTube URL to check
+        
+    Returns:
+        bool: True if it's a playlist-only URL, False otherwise
+        
+    Examples:
+        https://www.youtube.com/playlist?list=PLxxx -> True
+        https://www.youtube.com/watch?v=xxx&list=PLxxx -> False (has video)
+        https://youtu.be/xxx?list=PLxxx -> False (has video)
+    """
+    if not url or ('youtube.com' not in url and 'youtu.be' not in url):
+        return False
+    
+    # Check for pure playlist URL patterns
+    if '/playlist?' in url and 'list=' in url:
+        return True
+    
+    # If it has a video ID, it's not a playlist-only URL
+    video_url, video_id = extract_video_id_from_url(url)
+    if video_id:
+        return False
+    
+    # If it has 'list=' but no video indicator, it's a playlist
+    if 'list=' in url and '/watch' not in url:
+        return True
+    
+    return False

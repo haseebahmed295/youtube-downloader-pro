@@ -14,6 +14,7 @@ from qfluentwidgets import (ScrollArea, PushButton, LineEdit, ComboBox, SwitchBu
 import os
 
 from app.common.config import cfg
+from app.common.utils import extract_video_id_from_url, is_playlist_only_url
 from app.components.download_worker import DownloadWorker
 
 
@@ -95,9 +96,10 @@ class SingleDownloadInterface(ScrollArea):
         self.qualityCombo.setMinimumWidth(150)
 
         # Configure format combo
-        self.formatCombo.addItems(["MP4", "WEBM", "3GP"])
-        self.formatCombo.setCurrentText(cfg.get(cfg.downloadFormat).upper())
+        self.formatCombo.addItems(["WEBM", "MP4", "MKV"])
+        self.formatCombo.setCurrentText("WEBM")  # Default to WEBM (native format)
         self.formatCombo.setMinimumWidth(120)
+        self.formatCombo.currentTextChanged.connect(self.onFormatChanged)
 
         # Configure download button
         self.downloadBtn.setIcon(FIF.DOWNLOAD)
@@ -218,12 +220,27 @@ class SingleDownloadInterface(ScrollArea):
         """ Update format options based on audio/video selection """
         if self.audioOnlySwitch.isChecked():
             self.formatCombo.clear()
-            self.formatCombo.addItems(["MP3", "AAC", "OGG", "WAV"])
+            self.formatCombo.addItems(["MP3", "M4A", "OPUS", "OGG", "WAV"])
             self.formatCombo.setCurrentText("MP3")
+            self.formatCombo.setToolTip("Audio will be extracted and converted to selected format")
         else:
             self.formatCombo.clear()
-            self.formatCombo.addItems(["MP4", "WEBM", "3GP"])
-            self.formatCombo.setCurrentText(cfg.get(cfg.downloadFormat).upper())
+            self.formatCombo.addItems(["WEBM", "MP4", "MKV"])
+            self.formatCombo.setCurrentText("WEBM")
+            self.formatCombo.setToolTip("WEBM is YouTube's native format (fastest). MP4/MKV may require conversion.")
+    
+    def onFormatChanged(self, format_text):
+        """ Handle format selection change """
+        if not self.audioOnlySwitch.isChecked() and format_text == "MP4":
+            InfoBar.warning(
+                title='Format Notice',
+                content='MP4 format may require conversion using FFmpeg, which can take additional time. WEBM is recommended for faster downloads.',
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=4000,
+                parent=self
+            )
 
     def startDownload(self):
         """ Start download process """
@@ -248,9 +265,18 @@ class SingleDownloadInterface(ScrollArea):
             return
         
         # Check if it's a pure playlist URL (without video ID)
-        if self.is_playlist_only_url(url):
+        if is_playlist_only_url(url):
             self.showError("This is a playlist URL. Please use the Playlist tab to download playlists.")
             return
+        
+        # Extract clean video URL (remove playlist parameters)
+        clean_url, video_id = extract_video_id_from_url(url)
+        if not clean_url:
+            self.showError("Could not extract video ID from URL. Please check the URL format.")
+            return
+        
+        # Use the clean URL for download
+        url = clean_url
 
         # Add to history immediately with "Downloading" status
         self.current_history_index = self.addToHistory(url, "Downloading", "")
@@ -454,27 +480,4 @@ class SingleDownloadInterface(ScrollArea):
             self.videoDurationLabel.setText("Duration: Unknown")
         self.videoInfoCard.show()
     
-    def is_playlist_only_url(self, url):
-        """ Check if URL is a pure playlist URL (no video ID) """
-        # Pure playlist URLs have 'list=' but no 'v=' or '/watch'
-        # Examples:
-        # Playlist only: https://www.youtube.com/playlist?list=PLxxx
-        # Video in playlist: https://www.youtube.com/watch?v=xxx&list=PLxxx (OK - download single video)
-        
-        if 'youtube.com' not in url and 'youtu.be' not in url:
-            return False
-        
-        # Check for pure playlist URL patterns
-        if '/playlist?' in url and 'list=' in url:
-            # This is a pure playlist URL
-            return True
-        
-        # If it has a video ID (v= or youtu.be/), it's a single video (even if in a playlist)
-        if 'v=' in url or 'youtu.be/' in url:
-            return False
-        
-        # If it has 'list=' but no video indicator, it's a playlist
-        if 'list=' in url and '/watch' not in url:
-            return True
-        
-        return False
+

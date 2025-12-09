@@ -1,2 +1,6 @@
 __pycache__
 /PyQt-Fluent-Widgets-PySide6/
+runtime/
+.kiro/
+dist/
+build/

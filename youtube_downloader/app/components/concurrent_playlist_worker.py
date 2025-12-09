@@ -155,7 +155,8 @@ class DownloadTask(QRunnable):
                     logger.info(f"Task {self.index}/{self.total} cancelled during download: {self.title}")
                     return
                 
-                file_path = ydl.prepare_filename(video_info)
+                # Get the actual output file path (handles audio conversion)
+                file_path = self.get_actual_output_path(ydl, video_info)
                 
             logger.info(f"Task {self.index}/{self.total} completed: {self.title}")
             
@@ -173,6 +174,47 @@ class DownloadTask(QRunnable):
     def cancel(self):
         """Cancel this download"""
         self._is_cancelled = True
+    
+    def get_actual_output_path(self, ydl, info_dict):
+        """
+        Get the actual output file path after post-processing
+        
+        For audio-only downloads, yt-dlp converts the file, so we need to
+        find the actual converted file with the correct extension.
+        """
+        base_path = ydl.prepare_filename(info_dict)
+        
+        # Check if this is an audio-only download
+        is_audio = 'postprocessors' in self.download_opts
+        
+        # If audio-only, the extension will be changed by post-processor
+        if is_audio:
+            # Get the target format from postprocessors
+            format_type = None
+            for pp in self.download_opts.get('postprocessors', []):
+                if pp.get('key') == 'FFmpegExtractAudio':
+                    format_type = pp.get('preferredcodec', 'mp3')
+                    break
+            
+            if format_type:
+                # Remove the original extension and add the target format
+                base_without_ext = os.path.splitext(base_path)[0]
+                converted_path = f"{base_without_ext}.{format_type}"
+                
+                # Check if converted file exists
+                if os.path.exists(converted_path):
+                    logger.info(f"Found converted audio file: {converted_path}")
+                    return converted_path
+                
+                # Fallback: check for common audio extensions
+                for ext in [format_type, 'mp3', 'opus', 'm4a', 'webm']:
+                    test_path = f"{base_without_ext}.{ext}"
+                    if os.path.exists(test_path):
+                        logger.info(f"Found audio file with extension: {ext}")
+                        return test_path
+        
+        # For video or if file not found, return the prepared filename
+        return base_path
 
 
 class ConcurrentPlaylistWorker(QThread):
@@ -283,11 +325,29 @@ class ConcurrentPlaylistWorker(QThread):
             
         if self.is_audio_only:
             download_opts['format'] = 'bestaudio/best'
+            
+            # Map format names to yt-dlp codec names
+            codec_map = {
+                'mp3': 'mp3',
+                'm4a': 'm4a',      # AAC audio in MP4 container
+                'opus': 'opus',    # Modern efficient codec
+                'ogg': 'vorbis',   # OGG uses vorbis codec
+                'wav': 'wav',      # Uncompressed audio
+                'flac': 'flac',    # Lossless compression
+                'aac': 'm4a'       # Legacy: AAC outputs as M4A
+            }
+            
+            codec = codec_map.get(self.format_type.lower(), 'mp3')
+            
             download_opts['postprocessors'] = [{
                 'key': 'FFmpegExtractAudio',
-                'preferredcodec': self.format_type.lower(),
+                'preferredcodec': codec,
                 'preferredquality': '192',
             }]
+        
+        # For MKV video format, add merge format
+        if not self.is_audio_only and self.format_type.lower() == 'mkv':
+            download_opts['merge_output_format'] = 'mkv'
             
         # Step 3: Create and queue download tasks
         for index, entry in enumerate(entries, start=1):
@@ -364,20 +424,48 @@ class ConcurrentPlaylistWorker(QThread):
         """Get format string for yt-dlp"""
         if self.is_audio_only:
             return 'bestaudio/best'
-            
-        quality_map = {
-            "1080p": "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-            "720p": "bestvideo[height<=720]+bestaudio/best[height<=720]",
-            "480p": "bestvideo[height<=480]+bestaudio/best[height<=480]",
-            "360p": "bestvideo[height<=360]+bestaudio/best[height<=360]",
-            "Best Available": "bestvideo+bestaudio/best"
-        }
+
+        # Map quality to yt-dlp format selectors
+        format_type_lower = self.format_type.lower()
         
+        # For WEBM (native format), prefer it directly
+        if format_type_lower == 'webm':
+            quality_map = {
+                "1080p": "bestvideo[ext=webm][height<=1080]+bestaudio[ext=webm]/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+                "720p": "bestvideo[ext=webm][height<=720]+bestaudio[ext=webm]/bestvideo[height<=720]+bestaudio/best[height<=720]",
+                "480p": "bestvideo[ext=webm][height<=480]+bestaudio[ext=webm]/bestvideo[height<=480]+bestaudio/best[height<=480]",
+                "360p": "bestvideo[ext=webm][height<=360]+bestaudio[ext=webm]/bestvideo[height<=360]+bestaudio/best[height<=360]",
+                "Best Available": "bestvideo[ext=webm]+bestaudio[ext=webm]/bestvideo+bestaudio/best"
+            }
+        # For MP4, may require conversion
+        elif format_type_lower == 'mp4':
+            quality_map = {
+                "1080p": "bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+                "720p": "bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]",
+                "480p": "bestvideo[ext=mp4][height<=480]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]",
+                "360p": "bestvideo[ext=mp4][height<=360]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[height<=360]",
+                "Best Available": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+            }
+        # For MKV, download best and let yt-dlp merge into MKV container
+        elif format_type_lower == 'mkv':
+            quality_map = {
+                "1080p": "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+                "720p": "bestvideo[height<=720]+bestaudio/best[height<=720]",
+                "480p": "bestvideo[height<=480]+bestaudio/best[height<=480]",
+                "360p": "bestvideo[height<=360]+bestaudio/best[height<=360]",
+                "Best Available": "bestvideo+bestaudio/best"
+            }
+        # For other formats, use best available
+        else:
+            quality_map = {
+                "1080p": "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+                "720p": "bestvideo[height<=720]+bestaudio/best[height<=720]",
+                "480p": "bestvideo[height<=480]+bestaudio/best[height<=480]",
+                "360p": "bestvideo[height<=360]+bestaudio/best[height<=360]",
+                "Best Available": "bestvideo+bestaudio/best"
+            }
+
         format_str = quality_map.get(self.quality, "bestvideo+bestaudio/best")
-        
-        if self.format_type.lower() != "best":
-            format_str += f"/best[ext={self.format_type.lower()}]"
-            
         return format_str
         
     def cancel(self):

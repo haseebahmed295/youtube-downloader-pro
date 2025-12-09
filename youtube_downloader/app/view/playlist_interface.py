@@ -213,9 +213,11 @@ class PlaylistInterface(ScrollArea):
         self.qualityCombo.setMinimumWidth(150)
         
         # Format combo
-        self.formatCombo.addItems(["MP4", "WEBM", "3GP"])
-        self.formatCombo.setCurrentText(cfg.get(cfg.downloadFormat).upper())
+        self.formatCombo.addItems(["WEBM", "MP4", "MKV"])
+        self.formatCombo.setCurrentText("WEBM")  # Default to WEBM (native format)
         self.formatCombo.setMinimumWidth(120)
+        self.formatCombo.setToolTip("WEBM is YouTube's native format (fastest). MP4/MKV may require conversion.")
+        self.formatCombo.currentTextChanged.connect(self.onFormatChanged)
         
         # Playlist range with modern SpinBox
         self.startIndexSpin.setMinimum(1)
@@ -392,12 +394,27 @@ class PlaylistInterface(ScrollArea):
         """Update format options based on audio/video selection"""
         if self.audioOnlySwitch.isChecked():
             self.formatCombo.clear()
-            self.formatCombo.addItems(["MP3", "AAC", "OGG", "WAV"])
+            self.formatCombo.addItems(["MP3", "M4A", "OPUS", "OGG", "WAV"])
             self.formatCombo.setCurrentText("MP3")
+            self.formatCombo.setToolTip("Audio will be extracted and converted to selected format")
         else:
             self.formatCombo.clear()
-            self.formatCombo.addItems(["MP4", "WEBM", "3GP"])
-            self.formatCombo.setCurrentText(cfg.get(cfg.downloadFormat).upper())
+            self.formatCombo.addItems(["WEBM", "MP4", "MKV"])
+            self.formatCombo.setCurrentText("WEBM")
+            self.formatCombo.setToolTip("WEBM is YouTube's native format (fastest). MP4/MKV may require conversion.")
+    
+    def onFormatChanged(self, format_text):
+        """Handle format selection change"""
+        if not self.audioOnlySwitch.isChecked() and format_text == "MP4":
+            InfoBar.warning(
+                title='Format Notice',
+                content='MP4 format may require conversion using FFmpeg, which can take additional time. WEBM is recommended for faster downloads.',
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=4000,
+                parent=self
+            )
             
     def startDownload(self):
         """Start playlist download"""
