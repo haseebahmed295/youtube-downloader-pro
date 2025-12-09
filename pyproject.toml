@@ -12,6 +12,11 @@ license = {text = "MIT"}
 authors = [
     {name = "haseebahmed", email = "quicktiptech@gmail.com"}
 ]
+
+[project.urls]
+Homepage = "https://github.com/haseebahmed295/youtube-downloader-pro"
+Repository = "https://github.com/haseebahmed295/youtube-downloader-pro"
+Issues = "https://github.com/haseebahmed295/youtube-downloader-pro/issues"
 keywords = ["youtube", "downloader", "video", "audio", "yt-dlp", "pyside6", "fluent-design"]
 classifiers = [
     "Development Status :: 4 - Beta",

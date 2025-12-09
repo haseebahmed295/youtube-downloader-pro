@@ -87,17 +87,6 @@ class MainWindow(FluentWindow):
             position=NavigationItemPosition.BOTTOM
         )
 
-        # add custom widget to bottom
-        self.navigationInterface.addItem(
-            routeKey='github',
-            icon=FIF.GITHUB,
-            text="GitHub",
-            onClick=self.onGitHub,
-            selectable=False,
-            tooltip="View on GitHub",
-            position=NavigationItemPosition.BOTTOM
-        )
-
     def initWindow(self):
         """ Initialize window """
         self.resize(1000, 800)
@@ -136,9 +125,7 @@ class MainWindow(FluentWindow):
         self.show()
         QApplication.processEvents()
 
-    def onGitHub(self):
-        """ Open GitHub page """
-        QDesktopServices.openUrl(QUrl("https://github.com/zhiyiYo/PyQt-Fluent-Widgets"))
+
 
     def resizeEvent(self, e):
         super().resizeEvent(e)

@@ -96,20 +96,10 @@ class AboutInterface(ScrollArea):
         separator.setStyleSheet("background-color: rgba(0, 0, 0, 0.1);")
         linksLayout.addWidget(separator)
         
-        btnLayout = QHBoxLayout()
-        btnLayout.setSpacing(15)
-
         githubBtn = PrimaryPushButton(FIF.GITHUB, "GitHub Repository")
-        githubBtn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/zhiyiYo/PyQt-Fluent-Widgets")))
-
-        docsBtn = PrimaryPushButton(FIF.DOCUMENT, "Documentation")
-        docsBtn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://qfluentwidgets.com")))
-
-        btnLayout.addWidget(githubBtn)
-        btnLayout.addWidget(docsBtn)
-        btnLayout.addStretch()
+        githubBtn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/haseebahmed295/youtube-downloader-pro")))
         
-        linksLayout.addLayout(btnLayout)
+        linksLayout.addWidget(githubBtn)
 
         # Add to main layout
         self.vBoxLayout.addWidget(headerCard)
