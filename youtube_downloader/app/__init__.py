@@ -1,4 +1,4 @@
 # coding: utf-8
 """
-YouTube Downloader Application Package
+Ytp Downloader Application Package
 """

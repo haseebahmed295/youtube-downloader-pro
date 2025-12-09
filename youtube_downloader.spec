@@ -5,7 +5,10 @@ block_cipher = None
 a = Analysis(
     ['youtube_downloader\\main.py'],
     pathex=['youtube_downloader'],
-    binaries=[],
+    binaries=[
+        ('installer_build\\ffmpeg\\bin\\ffmpeg.exe', '.'),
+        ('installer_build\\ffmpeg\\bin\\ffprobe.exe', '.'),
+    ],
     datas=[
         ('youtube_downloader\\app\\resource', 'app\\resource'),
     ],
@@ -75,7 +78,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='YouTube Downloader Pro',
+    name='Ytp Downloader',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,  # Disabled on Windows (strip tool not available)
@@ -86,7 +89,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='app_icon.ico',
+    icon='installer_build\\assets\\app_icon.ico',
 )
 
 coll = COLLECT(
@@ -101,5 +104,5 @@ coll = COLLECT(
         'vcruntime140.dll',
         'python*.dll',
     ],
-    name='YouTube Downloader Pro',
+    name='Ytp Downloader',
 )

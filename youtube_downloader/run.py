@@ -2,7 +2,7 @@
 # coding:utf-8
 
 """
-Simple run script for YouTube Downloader
+Simple run script for Ytp Downloader
 """
 
 

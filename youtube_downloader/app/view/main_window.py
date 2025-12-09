@@ -92,7 +92,7 @@ class MainWindow(FluentWindow):
         self.resize(1000, 800)
         self.setMinimumWidth(800)
         self.setWindowIcon(getAppIcon())
-        self.setWindowTitle('YouTube Downloader')
+        self.setWindowTitle('Ytp Downloader')
 
         self.setMicaEffectEnabled(cfg.get(cfg.micaEnabled))
         

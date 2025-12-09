@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-Components package for YouTube Downloader
+Components package for Ytp Downloader
 """
 from .download_worker import DownloadWorker
 from .playlist_worker import PlaylistDownloadWorker

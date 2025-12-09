@@ -1,4 +1,4 @@
-# YouTube Downloader Pro
+# Ytp Downloader
 
 A modern, feature-rich YouTube downloader application built with PySide6 and yt-dlp.
 

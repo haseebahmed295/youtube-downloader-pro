@@ -1,4 +1,4 @@
-# YouTube Downloader Pro - Installer Build
+# Ytp Downloader - Installer Build
 
 This folder contains all the build scripts and assets needed to create the MSI installer.
 
@@ -52,7 +52,7 @@ build_msi_only.bat
 ## Build Process
 
 1. **Clean**: Removes previous build artifacts
-2. **PyInstaller**: Builds the executable to `dist/YouTube Downloader Pro/`
+2. **PyInstaller**: Builds the executable to `dist/Ytp Downloader/`
 3. **Generate WiX**: Creates `temp/installer_generated.wxs` with all files
 4. **Add Extensions**: Ensures WiX UI extensions are available
 5. **Build MSI**: Compiles the final installer to `output/`

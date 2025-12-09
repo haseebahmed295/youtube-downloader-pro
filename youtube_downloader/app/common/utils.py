@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-Utility functions for the YouTube Downloader application
+Utility functions for the Ytp Downloader application
 """
 import re
 import unicodedata

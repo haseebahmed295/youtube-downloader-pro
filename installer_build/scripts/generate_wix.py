@@ -10,7 +10,7 @@ from pathlib import Path
 # Get absolute paths
 SCRIPT_DIR = Path(__file__).parent.absolute()
 PROJECT_ROOT = SCRIPT_DIR.parent.parent
-DIST_DIR = PROJECT_ROOT / "dist" / "YouTube Downloader Pro"
+DIST_DIR = PROJECT_ROOT / "dist" / "Ytp Downloader"
 OUTPUT_FILE = SCRIPT_DIR.parent / "temp" / "installer_generated.wxs"
 ASSETS_DIR = SCRIPT_DIR.parent / "assets"
 
@@ -70,7 +70,7 @@ def generate_wix_xml():
     other_files = []
     
     for f in all_files:
-        if f.name == "YouTube Downloader Pro.exe":
+        if f.name == "Ytp Downloader.exe":
             main_exe = f
         else:
             other_files.append(f)
@@ -95,7 +95,7 @@ def generate_wix_xml():
         '<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"',
         '     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">',
         '',
-        '  <Package Name="YouTube Downloader Pro"',
+        '  <Package Name="Ytp Downloader"',
         '           Language="1033"',
         '           Version="1.0.0.0"',
         '           Manufacturer="Haseeb Ahmed"',
@@ -107,7 +107,7 @@ def generate_wix_xml():
         '    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />',
         '    <MediaTemplate EmbedCab="yes" />',
         '',
-        '    <Feature Id="ProductFeature" Title="YouTube Downloader Pro" Level="1">',
+        '    <Feature Id="ProductFeature" Title="Ytp Downloader" Level="1">',
         '      <ComponentGroupRef Id="ProductComponents" />',
     ]
     
@@ -149,7 +149,7 @@ def generate_wix_xml():
     
     # Build nested directory structure
     xml_lines.append('    <StandardDirectory Id="ProgramFiles6432Folder">')
-    xml_lines.append('      <Directory Id="INSTALLFOLDER" Name="YouTube Downloader Pro">')
+    xml_lines.append('      <Directory Id="INSTALLFOLDER" Name="Ytp Downloader">')
     
     def add_directories(parent_path, indent_level):
         indent = '        ' + ('  ' * indent_level)
@@ -169,7 +169,7 @@ def generate_wix_xml():
         '      </Directory>',
         '    </StandardDirectory>',
         '    <StandardDirectory Id="ProgramMenuFolder">',
-        '      <Directory Id="ApplicationProgramsFolder" Name="YouTube Downloader Pro"/>',
+        '      <Directory Id="ApplicationProgramsFolder" Name="Ytp Downloader"/>',
         '    </StandardDirectory>',
         '    <StandardDirectory Id="DesktopFolder" />',
         '',
@@ -188,13 +188,13 @@ def generate_wix_xml():
         f'        <File Id="MainExeFile" Source="{main_exe_path}" KeyPath="yes">',
         '          <Shortcut Id="StartMenuShortcut"',
         '                    Directory="ApplicationProgramsFolder"',
-        '                    Name="YouTube Downloader Pro"',
+        '                    Name="Ytp Downloader"',
         '                    Description="Download YouTube videos and audio"',
         '                    WorkingDirectory="INSTALLFOLDER"',
         '                    Icon="AppIcon" />',
         '          <Shortcut Id="DesktopShortcut"',
         '                    Directory="DesktopFolder"',
-        '                    Name="YouTube Downloader Pro"',
+        '                    Name="Ytp Downloader"',
         '                    Description="Download YouTube videos and audio"',
         '                    WorkingDirectory="INSTALLFOLDER"',
         '                    Icon="AppIcon" />',
@@ -235,7 +235,7 @@ def generate_wix_xml():
         '      <Component Id="ApplicationShortcutsComponent">',
         '        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall"/>',
         '        <RegistryValue Root="HKCU"',
-        '                       Key="Software\\YouTube Downloader Pro"',
+        '                       Key="Software\\Ytp Downloader"',
         '                       Name="installed"',
         '                       Type="integer"',
         '                       Value="1"',

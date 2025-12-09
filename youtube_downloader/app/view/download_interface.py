@@ -317,7 +317,7 @@ class DownloadInterface(ScrollArea):
         """ Add information bar with instructions """
         infoBar = InfoBar(
             icon=InfoBarIcon.INFORMATION,
-            title="Welcome to YouTube Downloader",
+            title="Welcome to Ytp Downloader",
             content="Enter a YouTube video or playlist URL above and click Download. "
                    "You can choose quality, format, and download audio-only versions.",
             orient=Qt.Horizontal,

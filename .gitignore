@@ -14,3 +14,5 @@ installer_generated.wxs
 installer_build/temp/
 installer_build/.wix/
 installer_build/output/*.msi
+installer_build/1.0/*.msi
+installer_build/ffmpeg/

@@ -1,9 +1,9 @@
 @echo off
-REM YouTube Downloader Pro - Complete Build Script
+REM Ytp Downloader - Complete Build Script
 REM Organized build structure
 
 echo ========================================
-echo YouTube Downloader Pro - Build Installer
+echo Ytp Downloader - Build Installer
 echo ========================================
 echo.
 
@@ -25,19 +25,17 @@ echo   Done
 echo.
 
 echo [2/5] Building executable with PyInstaller...
-cd ..
 pyinstaller youtube_downloader.spec
 if errorlevel 1 (
     echo ERROR: PyInstaller failed!
     pause
     exit /b 1
 )
-cd installer_build
 echo   Done
 echo.
 
 echo [3/5] Generating WiX installer file...
-cd scripts
+cd .\installer_build\scripts
 python generate_wix.py
 cd ..
 if errorlevel 1 (

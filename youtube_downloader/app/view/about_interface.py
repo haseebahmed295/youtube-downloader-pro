@@ -44,7 +44,7 @@ class AboutInterface(ScrollArea):
         appIcon.setFixedSize(64, 64)
         headerLayout.addWidget(appIcon, 0, Qt.AlignCenter)
         
-        appTitle = TitleLabel("YouTube Downloader")
+        appTitle = TitleLabel("Ytp Downloader")
         appTitle.setAlignment(Qt.AlignCenter)
         headerLayout.addWidget(appTitle)
         

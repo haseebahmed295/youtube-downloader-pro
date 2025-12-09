@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "youtube-downloader-pro"
+name = "ytp-downloader"
 version = "1.0.0"
 description = "A modern YouTube video and audio downloader built with PySide6-Fluent-Widgets"
 readme = "README.md"
@@ -56,10 +56,10 @@ dev = [
 
 
 [project.scripts]
-youtube-downloader = "youtube_downloader.main:main"
+ytp-downloader = "youtube_downloader.main:main"
 
 [project.gui-scripts]
-youtube-downloader-gui = "youtube_downloader.main:main"
+ytp-downloader-gui = "youtube_downloader.main:main"
 
 [tool.setuptools]
 packages = ["youtube_downloader", "youtube_downloader.app", "youtube_downloader.app.common", "youtube_downloader.app.components", "youtube_downloader.app.view", "youtube_downloader.app.resource"]

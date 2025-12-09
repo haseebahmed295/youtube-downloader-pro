@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-Logging configuration for YouTube Downloader
+Logging configuration for Ytp Downloader
 """
 import logging
 import os
@@ -96,7 +96,7 @@ def setup_logger(name='YouTubeDownloader', level=logging.INFO):
     
     # Log startup
     logger.info("=" * 80)
-    logger.info(f"YouTube Downloader started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"Ytp Downloader started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"Log file: {log_file}")
     logger.info("=" * 80)
     

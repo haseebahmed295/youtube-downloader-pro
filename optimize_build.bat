@@ -3,7 +3,7 @@ REM Build Size Optimization Script
 REM This script removes unnecessary files before building
 
 echo ========================================
-echo YouTube Downloader Build Optimizer
+echo Ytp Downloader Build Optimizer
 echo ========================================
 echo.
 
@@ -32,15 +32,15 @@ echo [4/4] Building optimized executable...
 pyinstaller youtube_downloader.spec
 echo.
 
-if exist "dist\YouTube Downloader Pro\YouTube Downloader Pro.exe" (
+if exist "dist\Ytp Downloader\Ytp Downloader.exe" (
     echo ========================================
     echo Build completed successfully!
     echo ========================================
     echo.
-    echo Output location: dist\YouTube Downloader Pro\
+    echo Output location: dist\Ytp Downloader\
     echo.
     echo Checking size...
-    dir "dist\YouTube Downloader Pro" /s
+    dir "dist\Ytp Downloader" /s
 ) else (
     echo ========================================
     echo Build failed! Check errors above.

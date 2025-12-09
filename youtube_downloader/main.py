@@ -2,7 +2,7 @@
 # coding:utf-8
 
 """
-YouTube Downloader Application
+Ytp Downloader Application
 Main entry point for the application
 """
 
@@ -29,7 +29,7 @@ def main():
         
         # Now set up logging (after QApplication exists)
         logger = setup_logger(level='DEBUG')  # Change to 'DEBUG' for more verbose logging
-        logger.info("Initializing YouTube Downloader...")
+        logger.info("Initializing Ytp Downloader...")
         
         # Enable DPI scaling
         if cfg.get(cfg.dpiScale) != "Auto":

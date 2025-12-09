@@ -205,7 +205,7 @@ class SingleDownloadInterface(ScrollArea):
         """ Add information bar with instructions """
         infoBar = InfoBar(
             icon=InfoBarIcon.INFORMATION,
-            title="Welcome to YouTube Downloader",
+            title="Welcome to Ytp Downloader",
             content="Enter a YouTube video URL and press Ctrl+Enter or click Download. "
                    "Choose quality, format, and enable audio-only mode as needed.",
             orient=Qt.Horizontal,

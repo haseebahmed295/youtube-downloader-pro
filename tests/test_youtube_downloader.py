@@ -2,7 +2,7 @@
 # coding:utf-8
 
 """
-Test script for YouTube Downloader functionality
+Test script for Ytp Downloader functionality
 """
 
 import os
@@ -13,7 +13,7 @@ from app.common.config import cfg
 def test_youtube_downloader():
     """Test YouTube downloader functionality"""
 
-    print("Testing YouTube Downloader...")
+    print("Testing Ytp Downloader...")
 
     # Test configuration
     print(f"Download folder: {cfg.get(cfg.downloadFolder)}")
@@ -56,10 +56,10 @@ def test_youtube_downloader():
             else:
                 print("No formats available")
 
-        print("✅ YouTube downloader functionality test passed!")
+        print("✅ Ytp downloader functionality test passed!")
 
     except Exception as e:
-        print(f"❌ YouTube downloader test failed: {e}")
+        print(f"❌ Ytp downloader test failed: {e}")
 
     # Test configuration saving
     try:

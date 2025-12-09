@@ -8,7 +8,7 @@ echo ========================================
 echo.
 
 REM Check if dist exists
-if not exist "..\dist\YouTube Downloader Pro\YouTube Downloader Pro.exe" (
+if not exist "..\dist\Ytp Downloader\Ytp Downloader.exe" (
     echo ERROR: dist folder not found!
     echo Run build.bat first to build the app
     pause

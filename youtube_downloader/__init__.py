@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-YouTube Downloader Pro
+Ytp Downloader
 A modern YouTube video and audio downloader built with PySide6-Fluent-Widgets
 """
 
