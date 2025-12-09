@@ -4,3 +4,13 @@ runtime/
 .kiro/
 dist/
 build/
+
+# Old installer files (deprecated - use installer_build/ instead)
+installer_output/
+installer_temp/
+installer_generated.wxs
+
+# New organized installer build
+installer_build/temp/
+installer_build/.wix/
+installer_build/output/*.msi

@@ -86,7 +86,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='youtube_downloader\\app\\resource\\images\\logo.png',
+    icon='app_icon.ico',
 )
 
 coll = COLLECT(
